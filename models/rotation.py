@@ -16,6 +16,51 @@ class RotationScheduler:
         self.schedule = {}  # 保存排期结果，格式：{学生名: {日期: 科室名}}
         self.department_counts = {}  # 二维数组，记录每个科室每个月的人数
         
+    def _calculate_total_rotation_months(self, student: Student) -> int:
+        """计算该学生需要的总轮转月数"""
+        # 专科培训固定33个月
+        if student.training_type == "专科培训":
+            return 33
+            
+        departments = self.department_manager.get_departments()
+        total_months = 0
+        
+        # 记录已计算的专业，避免重复计算
+        counted_specialties = set()
+        
+        for dept in departments:
+            # 如果该专业已经计算过，跳过
+            if dept.specialty in counted_specialties:
+                continue
+                
+            # 添加到已计算专业集合
+            counted_specialties.add(dept.specialty)
+            
+            # 获取该专业的所有科室
+            specialty_depts = [d for d in departments if d.specialty == dept.specialty]
+            
+            # 选择轮转月数最多的科室作为代表
+            main_dept = max(specialty_depts, 
+                          key=lambda d: sum(d.months_per_rotation) if isinstance(d.months_per_rotation, list) 
+                                      else d.months_per_rotation * d.rotation_times)
+            
+            # 计算该专业的轮转月数
+            if isinstance(main_dept.months_per_rotation, list):
+                specialty_months = sum(main_dept.months_per_rotation)
+            else:
+                specialty_months = main_dept.months_per_rotation * main_dept.rotation_times
+                
+            total_months += specialty_months
+        
+        # 学生自己的专业额外增加2个月
+        total_months += 2
+        
+        # 如果是社会培训，额外增加2个自选专业，每个1个月
+        if student.training_type == "社会培训" and student.self_selected_specialties:
+            total_months += len(student.self_selected_specialties)
+            
+        return total_months
+
     def generate_schedule(self, start_date: datetime, grade: str, months: int = 36) -> Dict[str, Dict[str, str]]:
         """生成轮转排期"""
         students = [s for s in self.student_manager.get_students() if s.grade == grade]
@@ -23,16 +68,60 @@ class RotationScheduler:
         
         if not students or not departments:
             return {}
-            
+        
+        # 获取所有专业
+        all_specialties = set(dept.specialty for dept in departments)
+        print(f"需要安排的专业: {len(all_specialties)}个 - {', '.join(all_specialties)}")
+        
+        # 初始化一个全局的月度科室人数矩阵
+        max_months = 60  # 设置一个足够大的月数范围
+        month_keys = []
+        for i in range(max_months):
+            current_date = start_date + timedelta(days=30*i)
+            month_keys.append(current_date.strftime("%Y-%m-%d"))
+        
+        # 初始化全局月度科室人数矩阵 {月份: {科室: 人数}}
+        global_dept_counts = {}
+        for month_key in month_keys:
+            global_dept_counts[month_key] = {dept.name: 0 for dept in departments}
+        
         # 初始化科室月度人数统计
-        self._initialize_department_counts(departments, start_date, months)
+        self._initialize_department_counts(departments, start_date, max_months)
+        
+        # 收集所有需要排期的科室信息
+        required_rotations = self._build_required_rotations()
         
         # 为每个学生生成轮转安排
         for student in students:
-            self._schedule_student(student, start_date, months)
+            # 根据学生类型获取需要的总轮转月数
+            total_months = self._calculate_total_rotation_months(student)
+            print(f"学生 {student.name} 需要轮转 {total_months} 个月")
+            
+            # 创建学生的排期字典
+            self.schedule[student.name] = {}
+            
+            # 获取该学生需要的轮转科室列表
+            student_rotations = self._get_student_required_rotations(student, required_rotations)
+            
+            # 按科室重要性排序
+            student_rotations.sort(key=lambda x: x['优先级'], reverse=True)
+            
+            # 确保total_months是整数，用于切片
+            total_months_int = int(total_months)
+            if total_months_int < total_months:
+                total_months_int += 1  # 向上取整，确保覆盖所有月份
+            
+            # 为学生分配轮转科室（按月份顺序）
+            self._assign_rotations_by_month(student, student_rotations, start_date, month_keys[:total_months_int], global_dept_counts)
+            
+            # 确保每个月都有排期
+            self._ensure_monthly_schedule(student.name, start_date, month_keys[:total_months_int])
+            
+        # 处理半月排期合并
+        self._handle_special_display()
             
         return self.schedule
-    
+
     def _initialize_department_counts(self, departments: List[Department], start_date: datetime, months: int):
         """初始化科室月度人数统计"""
         self.department_counts = {}
@@ -44,233 +133,248 @@ class RotationScheduler:
                 current_date = start_date + timedelta(days=30*i)
                 date_key = current_date.strftime("%Y-%m-%d")
                 self.department_counts[dept.name][date_key] = 0
-                
-    def _schedule_student(self, student: Student, start_date: datetime, total_months: int):
-        """为单个学生安排轮转"""
-        # 初始化学生的排期
-        self.schedule[student.name] = {}
-        
-        # 构建需要轮转的科室列表
-        rotation_departments = self._build_rotation_departments(student)
-        
-        # 分类科室：常规科室和后期科室
-        regular_departments = []
-        later_departments = []
-        
-        for dept_info in rotation_departments:
-            if dept_info["department"].is_later_rotation:
-                later_departments.append(dept_info)
-            else:
-                regular_departments.append(dept_info)
-        
-        # 设置第一年日期
-        first_year_end = start_date + timedelta(days=365)
-        first_year_months = min(12, total_months)
-        
-        # 计算每个科室第一轮和第二轮的月数
-        # 对于轮转次数>1的科室，单独处理
-        first_rotation_departments = []
-        second_rotation_departments = []
-        
-        for dept_info in regular_departments:
-            dept = dept_info["department"]
-            if dept.rotation_times > 1:
-                # 第一轮
-                first_month = dept_info["months"][0] if len(dept_info["months"]) > 0 else dept_info["months"][0]
-                first_rotation_departments.append({
-                    "department": dept,
-                    "months": first_month,
-                    "rotation_order": 1
-                })
-                
-                # 第二轮
-                second_month = dept_info["months"][1] if len(dept_info["months"]) > 1 else dept_info["months"][0]
-                second_rotation_departments.append({
-                    "department": dept,
-                    "months": second_month,
-                    "rotation_order": 2
-                })
-            else:
-                first_month = dept_info["months"][0] if len(dept_info["months"]) > 0 else 1.0
-                first_rotation_departments.append({
-                    "department": dept_info["department"],
-                    "months": first_month,
-                    "rotation_order": 1
-                })
-        
-        # 随机打乱科室顺序，但保持相同科室不连续
-        random.shuffle(first_rotation_departments)
-        
-        # 安排第一年轮转
-        current_date = start_date
-        scheduled_departments = set()  # 记录学生已经轮转过的科室专业
-        
-        # 先排第一轮轮转
-        for dept_info in first_rotation_departments:
-            dept = dept_info["department"]
-            months = dept_info["months"]
-            
-            # 如果这个科室专业已经轮转过，跳过
-            if dept.specialty in scheduled_departments:
-                continue
-                
-            # 安排这个科室
-            end_date = self._assign_department(student.name, dept, current_date, months)
-            scheduled_departments.add(dept.specialty)
-            
-            # 更新当前日期
-            current_date = end_date
-            
-            # 如果已经超过第一年，停止
-            if current_date >= first_year_end:
-                break
-        
-        # 安排第二轮和后期轮转
-        remaining_departments = second_rotation_departments + later_departments
-        random.shuffle(remaining_departments)
-        
-        # 计算剩余月数
-        remaining_months = total_months - (current_date.year - start_date.year) * 12 - \
-                          (current_date.month - start_date.month)
-        
-        if remaining_months > 0 and remaining_departments:
-            for dept_info in remaining_departments:
-                dept = dept_info["department"]
-                months = dept_info["months"]
-                
-                # 对于后期轮转，确保日期至少在开始日期一年后
-                if dept.is_later_rotation and current_date < first_year_end:
-                    current_date = first_year_end
-                
-                # 安排这个科室
-                end_date = self._assign_department(student.name, dept, current_date, months)
-                
-                # 更新当前日期
-                current_date = end_date
-                
-                # 如果已经超过总月数，停止
-                if current_date >= start_date + timedelta(days=30*total_months):
-                    break
     
-    def _build_rotation_departments(self, student: Student) -> List[Dict]:
-        """构建学生需要轮转的科室列表"""
-        rotation_departments = []
-        all_departments = self.department_manager.get_departments()
-        
-        # 添加所有科室
-        for dept in all_departments:
-            rotation_departments.append({
-                "department": dept,
-                "months": dept.months_per_rotation.copy() if isinstance(dept.months_per_rotation, list) else [dept.months_per_rotation]
+    def _build_required_rotations(self) -> List[Dict]:
+        """构建专科培训所需的轮转科室列表"""
+        required_rotations = [
+            {"科室名": "心内一科", "月数": 2.0, "优先级": 10, "是否第一次轮转": True},
+            {"科室名": "心内一科", "月数": 1.5, "优先级": 5, "是否第一次轮转": False},
+            {"科室名": "心电图室", "月数": 0.5, "优先级": 5, "是否第一次轮转": True},
+            {"科室名": "呼吸一科", "月数": 1.0, "优先级": 9, "是否第一次轮转": True},
+            {"科室名": "呼吸一科", "月数": 2.0, "优先级": 4, "是否第一次轮转": False},
+            {"科室名": "消化科", "月数": 1.0, "优先级": 8, "是否第一次轮转": True},
+            {"科室名": "中西医肝病科", "月数": 2.0, "优先级": 7, "是否第一次轮转": True},
+            {"科室名": "感染科", "月数": 2.0, "优先级": 7, "是否第一次轮转": True},
+            {"科室名": "风湿科", "月数": 2.0, "优先级": 7, "是否第一次轮转": True},
+            {"科室名": "肾内科", "月数": 2.0, "优先级": 7, "是否第一次轮转": True},
+            {"科室名": "血液科", "月数": 2.0, "优先级": 7, "是否第一次轮转": True},
+            {"科室名": "内分泌科", "月数": 2.0, "优先级": 7, "是否第一次轮转": True},
+            {"科室名": "神经内科", "月数": 2.0, "优先级": 7, "是否第一次轮转": True},
+            {"科室名": "重症医学科", "月数": 2.0, "优先级": 7, "是否第一次轮转": True},
+            {"科室名": "肿瘤科", "月数": 2.0, "优先级": 7, "是否第一次轮转": True},
+            {"科室名": "老年病科", "月数": 2.0, "优先级": 6, "是否第一次轮转": True},
+            {"科室名": "急诊科", "月数": 3.0, "优先级": 8, "是否第一次轮转": True},
+        ]
+        return required_rotations
+    
+    def _get_student_required_rotations(self, student: Student, base_rotations: List[Dict]) -> List[Dict]:
+        """获取该学生需要的轮转科室列表"""
+        # 深拷贝基础轮转列表
+        student_rotations = []
+        for rotation in base_rotations:
+            student_rotations.append(rotation.copy())
+            
+        # 添加学生自己专业的2个月
+        specialty_departments = self.department_manager.get_departments_by_specialty(student.specialty)
+        if specialty_departments:
+            main_dept = specialty_departments[0]
+            student_rotations.append({
+                "科室名": main_dept.name,
+                "月数": 2.0,
+                "优先级": 10,
+                "是否第一次轮转": True,
+                "是否本专业": True
             })
-        
-        # 处理学生自己的专业（额外多轮转两个月）
-        student_specialty_departments = self.department_manager.get_departments_by_specialty(student.specialty)
-        for dept in student_specialty_departments:
-            # 找到该科室，增加额外的两个月轮转
-            for dept_info in rotation_departments:
-                if dept_info["department"].name == dept.name:
-                    # 在第一次轮转的月数上增加2个月
-                    if dept_info["months"] and len(dept_info["months"]) > 0:
-                        dept_info["months"][0] += 2
-                    break
-        
-        # 处理社会培训的自选专业（每个专业额外轮转一个月）
-        if student.training_type == "社会培训" and student.self_selected_specialties:
-            for specialty in student.self_selected_specialties:
-                specialty_departments = self.department_manager.get_departments_by_specialty(specialty)
-                for dept in specialty_departments:
-                    # 找到该科室，增加额外的一个月轮转
-                    for dept_info in rotation_departments:
-                        if dept_info["department"].name == dept.name:
-                            # 在第一次轮转的月数上增加1个月
-                            if dept_info["months"] and len(dept_info["months"]) > 0:
-                                dept_info["months"][0] += 1
-                            break
-        
-        return rotation_departments
-    
-    def _assign_department(self, student_name: str, department: Department, start_date: datetime, months: float) -> datetime:
-        """为学生安排指定科室的轮转，返回结束日期"""
-        current_date = start_date
-        
-        # 确保months是浮点数而不是列表
-        if isinstance(months, list):
-            if len(months) > 0:
-                remaining_months = float(months[0])
-            else:
-                remaining_months = 1.0
-        else:
-            remaining_months = float(months)
-        
-        while remaining_months > 0:
-            date_key = current_date.strftime("%Y-%m-%d")
             
-            # 如果当前月份超出了跟踪范围，退出
-            if date_key not in self.department_counts.get(department.name, {}):
-                break
-                
-            # 计算本月分配月数
-            if remaining_months >= 1:
-                month_allocation = 1
-            else:
-                month_allocation = remaining_months
-                
-            # 检查当月该科室人数
-            min_count = float('inf')
-            for dept_name in self.department_counts:
-                if date_key in self.department_counts[dept_name]:
-                    min_count = min(min_count, self.department_counts[dept_name][date_key])
+        # 对每个专业只选择一个科室进行轮转
+        selected_specialties = {}  # 记录每个专业已经选择的科室
+        filtered_rotations = []
+        
+        # 先获取所有科室所属的专业
+        dept_to_specialty = {}
+        for dept in self.department_manager.get_departments():
+            dept_to_specialty[dept.name] = dept.specialty
+        
+        # 筛选每个专业只保留一个科室
+        for rotation in student_rotations:
+            dept_name = rotation["科室名"]
+            specialty = dept_to_specialty.get(dept_name, "未知专业")
             
-            # 如果该科室人数比最少的科室多2人以上，尝试下个月
-            if self.department_counts[department.name][date_key] > min_count + 2:
-                # 尝试下个月
-                current_date = current_date + timedelta(days=30)
+            # 如果该专业还未选择科室，或者这个是本专业轮转，则添加
+            if specialty not in selected_specialties or rotation.get("是否本专业", False):
+                selected_specialties[specialty] = dept_name
+                filtered_rotations.append(rotation)
+        
+        return filtered_rotations
+        
+    def _assign_rotations_by_month(self, student: Student, rotations: List[Dict], 
+                              start_date: datetime, month_keys: List[str], global_dept_counts: Dict):
+        """按月份顺序为学生分配轮转科室，每月优先安排人数最少的科室"""
+        # 深拷贝轮转列表，以免修改原始数据
+        remaining_rotations = rotations.copy()
+        
+        # 记录需要连续安排的轮转（如某科室需要连续轮转2个月）
+        continuous_rotation = None
+        continuous_months_left = 0
+        
+        # 按月份顺序安排
+        for month_key in month_keys:
+            # 如果有连续轮转，优先处理
+            if continuous_rotation and continuous_months_left > 0:
+                # 继续安排之前的科室
+                dept_name = continuous_rotation["科室名"]
+                self.schedule[student.name][month_key] = dept_name
+                
+                # 更新全局计数
+                global_dept_counts[month_key][dept_name] += 1
+                
+                # 减少剩余连续月数
+                continuous_months_left -= 1
+                
+                # 如果连续安排结束，检查是否需要从列表中移除该轮转
+                if continuous_months_left == 0:
+                    continuous_rotation["剩余月数"] = 0
+                    # 如果该轮转已完成，从列表中移除
+                    if continuous_rotation["剩余月数"] <= 0:
+                        if continuous_rotation in remaining_rotations:
+                            remaining_rotations.remove(continuous_rotation)
+                    continuous_rotation = None
+                
                 continue
             
-            # 安排本月轮转
-            self.schedule[student_name][date_key] = department.name
-            self.department_counts[department.name][date_key] += 1
+            # 计算当月各科室人数，用于选择人数最少的科室
+            dept_counts = global_dept_counts[month_key]
             
-            # 更新剩余月数和当前日期
-            remaining_months -= month_allocation
-            current_date = current_date + timedelta(days=30*month_allocation)
+            # 从剩余轮转中选择当月人数最少的科室
+            best_rotation = None
+            min_count = float('inf')
             
-            # 特殊处理：心内科第二次轮转后接心电图
-            if department.name in ["心内一科", "心内二科"] and remaining_months == 0:
-                # 检查心内科是否设置了轮转月数为1.5（表示第二次轮转后需要接心电图）
-                second_rotation_months = None
-                if len(department.months_per_rotation) > 1:
-                    second_rotation_months = department.months_per_rotation[1]
+            for rotation in remaining_rotations:
+                dept_name = rotation["科室名"]
+                dept_count = dept_counts.get(dept_name, 0)
                 
-                # 判断当前轮转月数是否符合心电图轮转条件
-                current_months = float(months) if not isinstance(months, list) else (months[0] if len(months) > 0 else 0)
+                # 如果人数更少，更新最佳科室
+                if dept_count < min_count:
+                    min_count = dept_count
+                    best_rotation = rotation
+            
+            # 如果找不到合适的科室，跳过当前月份
+            if not best_rotation:
+                continue
+            
+            # 获取科室名和月数
+            dept_name = best_rotation["科室名"]
+            months = best_rotation.get("月数", 1.0)
+            
+            # 初始化剩余月数（如果不存在）
+            if "剩余月数" not in best_rotation:
+                best_rotation["剩余月数"] = months
                 
-                # 如果是第二次轮转且月数是1.5，自动安排心电图
-                if second_rotation_months == 1.5 and current_months == 1.5:
-                    # 安排心电图室0.5个月
-                    ekg_dept = None
-                    for dept in self.department_manager.get_departments():
-                        if dept.name == "心电图室":
-                            ekg_dept = dept
-                            break
+            # 安排当月轮转
+            self.schedule[student.name][month_key] = dept_name
+            
+            # 如果是0.5个月轮转，添加标记
+            if months == 0.5 or best_rotation["剩余月数"] == 0.5:
+                self.schedule[student.name][month_key] = f"{dept_name}:half"
+                best_rotation["剩余月数"] -= 0.5
+            else:
+                # 对于连续多月的轮转，设置连续轮转状态
+                if best_rotation["剩余月数"] > 1:
+                    continuous_rotation = best_rotation
+                    continuous_months_left = int(best_rotation["剩余月数"]) - 1
+                    best_rotation["剩余月数"] = best_rotation["剩余月数"] - 1
+                else:
+                    # 一个月或不足一个月的轮转
+                    best_rotation["剩余月数"] -= 1
+            
+            # 更新全局计数
+            global_dept_counts[month_key][dept_name] += 1
+            
+            # 如果该轮转已完成，从列表中移除
+            if best_rotation["剩余月数"] <= 0 and not continuous_months_left:
+                remaining_rotations.remove(best_rotation)
+                
+        # 检查是否所有轮转都已安排
+        if remaining_rotations:
+            print(f"警告: 学生 {student.name} 还有 {len(remaining_rotations)} 个科室未安排完成")
+            for rotation in remaining_rotations:
+                print(f"  - {rotation['科室名']}: 剩余 {rotation.get('剩余月数', rotation.get('月数', 0))} 个月")
+
+    def _ensure_monthly_schedule(self, student_name: str, start_date: datetime, month_keys: List[str]):
+        """确保每个月都有排期安排"""
+        # 获取所有有排期的月份
+        scheduled_months = set(self.schedule[student_name].keys())
+        
+        # 获取所有需要排期的月份
+        required_months = set(month_keys)
+        
+        # 找出缺少排期的月份
+        missing_months = required_months - scheduled_months
+        
+        if missing_months:
+            print(f"学生 {student_name} 有 {len(missing_months)} 个月缺少排期")
+            
+            # 查找最近的有排期的月份
+            for missing_month in sorted(missing_months):
+                # 将日期转换为datetime对象
+                missing_date = datetime.strptime(missing_month, "%Y-%m-%d")
+                
+                # 查找最近的前一个月排期
+                closest_prev = None
+                closest_prev_delta = float('inf')
+                
+                for scheduled_month in scheduled_months:
+                    scheduled_date = datetime.strptime(scheduled_month, "%Y-%m-%d")
+                    if scheduled_date < missing_date:
+                        delta = (missing_date - scheduled_date).days
+                        if delta < closest_prev_delta:
+                            closest_prev_delta = delta
+                            closest_prev = scheduled_month
+                
+                # 填入最近的前一个科室排期
+                if closest_prev:
+                    self.schedule[student_name][missing_month] = self.schedule[student_name][closest_prev]
+                else:
+                    # 如果没有前一个排期，使用最近的后一个排期
+                    closest_next = None
+                    closest_next_delta = float('inf')
                     
-                    if ekg_dept:
-                        date_key = current_date.strftime("%Y-%m-%d")
-                        
-                        # 在当前日期安排心电图
-                        if date_key in self.schedule[student_name]:
-                            # 已经有科室，合并显示
-                            self.schedule[student_name][date_key] = f"{self.schedule[student_name][date_key]}/心电图室"
-                        else:
-                            self.schedule[student_name][date_key] = "心电图室"
-                        
-                        # 更新计数
-                        if date_key in self.department_counts.get("心电图室", {}):
-                            self.department_counts["心电图室"][date_key] += 1
-                            
-        # 返回当前日期作为结束日期
-        return current_date
+                    for scheduled_month in scheduled_months:
+                        scheduled_date = datetime.strptime(scheduled_month, "%Y-%m-%d")
+                        if scheduled_date > missing_date:
+                            delta = (scheduled_date - missing_date).days
+                            if delta < closest_next_delta:
+                                closest_next_delta = delta
+                                closest_next = scheduled_month
+                    
+                    if closest_next:
+                        self.schedule[student_name][missing_month] = self.schedule[student_name][closest_next]
+                    else:
+                        # 实在没有排期，填入"待定"
+                        self.schedule[student_name][missing_month] = "待定"
+    
+    def _handle_special_display(self):
+        """处理特殊显示需求，合并所有0.5个月的科室排期"""
+        for student_name, schedule_dict in self.schedule.items():
+            # 处理所有0.5个月的科室排期
+            half_month_dates = []
+            
+            # 第一步：找出所有包含半月标记的排期
+            for date_key, dept in list(schedule_dict.items()):
+                if ":half" in dept:
+                    half_month_dates.append(date_key)
+                    # 去掉标记
+                    schedule_dict[date_key] = dept.split(":half")[0]
+            
+            # 第二步：尝试合并相邻的半月排期
+            half_month_dates.sort()
+            for i in range(len(half_month_dates) - 1):
+                current_date = half_month_dates[i]
+                next_date = half_month_dates[i + 1]
+                
+                # 计算日期之间的间隔
+                current_dt = datetime.strptime(current_date, "%Y-%m-%d")
+                next_dt = datetime.strptime(next_date, "%Y-%m-%d")
+                days_gap = (next_dt - current_dt).days
+                
+                # 如果两个日期足够接近（间隔不超过20天），合并显示
+                if days_gap <= 20:
+                    current_dept = schedule_dict[current_date]
+                    next_dept = schedule_dict[next_date]
+                    
+                    # 合并显示
+                    combined_dept = f"{current_dept}/{next_dept}"
+                    schedule_dict[current_date] = combined_dept
     
     def export_to_excel(self, file_path: str, grade: str):
         """将排期导出到Excel"""
