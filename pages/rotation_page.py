@@ -89,14 +89,6 @@ class RotationPage(QWidget):
         self.start_date_edit.setDate(QDate.currentDate().addMonths(-QDate.currentDate().month() % 12 + 1))  # 设为当年9月1日
         settings_layout.addWidget(self.start_date_edit)
         
-        # 月数
-        settings_layout.addWidget(QLabel("轮转总月数:"))
-        self.months_spin = QSpinBox()
-        self.months_spin.setMinimum(12)
-        self.months_spin.setMaximum(48)
-        self.months_spin.setValue(36)
-        settings_layout.addWidget(self.months_spin)
-        
         # 生成排期按钮
         self.generate_button = QPushButton("生成排期")
         self.generate_button.clicked.connect(self._generate_schedule)
@@ -125,13 +117,44 @@ class RotationPage(QWidget):
         main_layout.setStretch(0, 1)  # 设置区域占比较小
         main_layout.setStretch(1, 4)  # 表格区域占比较大
     
+    def _calculate_total_months(self, grade):
+        """根据科室配置计算总轮转月数"""
+        department_manager = self.department_page.get_department_manager()
+        departments = department_manager.get_departments()
+        
+        # 默认总月数为36个月
+        default_months = 36
+        
+        if not departments:
+            return default_months
+            
+        # 计算所有科室的总轮转月数
+        total_months = 0
+        for dept in departments:
+            # 获取科室总月数
+            if hasattr(dept, 'get_total_months'):
+                total_months += dept.get_total_months()
+            else:
+                # 兼容旧版本
+                if isinstance(dept.months_per_rotation, list):
+                    total_months += sum(dept.months_per_rotation)
+                else:
+                    total_months += dept.months_per_rotation * dept.rotation_times
+        
+        # 确保总月数在合理范围内
+        total_months = max(12, min(48, total_months))
+        
+        return int(total_months)
+    
     def _generate_schedule(self):
         """生成排期"""
         try:
             # 获取参数
             grade = self.grade_combo.currentText()
             start_date = self.start_date_edit.date().toPyDate()
-            months = self.months_spin.value()
+            
+            # 计算总轮转月数
+            months = self._calculate_total_months(grade)
             
             # 创建调度器
             student_manager = self.student_page.get_student_manager()
@@ -146,7 +169,7 @@ class RotationPage(QWidget):
                 return
             
             # 显示正在生成
-            QMessageBox.information(self, "提示", "正在生成排期，可能需要等待几秒钟...")
+            QMessageBox.information(self, "提示", f"正在生成{months}个月的排期，可能需要等待几秒钟...")
             
             # 创建调度器并生成排期
             self.scheduler = RotationScheduler(student_manager, department_manager)
