@@ -1,0 +1,365 @@
+[
+  {
+    "name": "张一波",
+    "specialty": "消化科",
+    "grade": "2023级",
+    "position": "研究生",
+    "training_type": "社会培训",
+    "self_selected_specialties": [
+      "肾内科",
+      "消化科"
+    ]
+  },
+  {
+    "name": "李晓亭",
+    "specialty": "消化科",
+    "grade": "2023级",
+    "position": "研究生",
+    "training_type": "专科培训",
+    "self_selected_specialties": []
+  },
+  {
+    "name": "李炜",
+    "specialty": "消化科",
+    "grade": "2023级",
+    "position": "研究生",
+    "training_type": "专科培训",
+    "self_selected_specialties": []
+  },
+  {
+    "name": "邵长庆",
+    "specialty": "消化科",
+    "grade": "2023级",
+    "position": "研究生",
+    "training_type": "专科培训",
+    "self_selected_specialties": []
+  },
+  {
+    "name": "卢瑶瑶",
+    "specialty": "消化科",
+    "grade": "2023级",
+    "position": "研究生",
+    "training_type": "专科培训",
+    "self_selected_specialties": []
+  },
+  {
+    "name": "张媛媛",
+    "specialty": "消化科",
+    "grade": "2023级",
+    "position": "研究生",
+    "training_type": "专科培训",
+    "self_selected_specialties": []
+  },
+  {
+    "name": "戴宇欣",
+    "specialty": "消化科",
+    "grade": "2023级",
+    "position": "研究生",
+    "training_type": "专科培训",
+    "self_selected_specialties": []
+  },
+  {
+    "name": "谢怡琳",
+    "specialty": "消化科",
+    "grade": "2023级",
+    "position": "研究生",
+    "training_type": "专科培训",
+    "self_selected_specialties": []
+  },
+  {
+    "name": "董安娜",
+    "specialty": "消化科",
+    "grade": "2023级",
+    "position": "研究生",
+    "training_type": "专科培训",
+    "self_selected_specialties": []
+  },
+  {
+    "name": "宋宁",
+    "specialty": "消化科",
+    "grade": "2023级",
+    "position": "研究生",
+    "training_type": "专科培训",
+    "self_selected_specialties": []
+  },
+  {
+    "name": "钟冰寒",
+    "specialty": "消化科",
+    "grade": "2023级",
+    "position": "研究生",
+    "training_type": "专科培训",
+    "self_selected_specialties": []
+  },
+  {
+    "name": "杨雪",
+    "specialty": "消化科",
+    "grade": "2023级",
+    "position": "研究生",
+    "training_type": "专科培训",
+    "self_selected_specialties": []
+  },
+  {
+    "name": "崔承杰",
+    "specialty": "消化科",
+    "grade": "2023级",
+    "position": "研究生",
+    "training_type": "专科培训",
+    "self_selected_specialties": []
+  },
+  {
+    "name": "吕佩真",
+    "specialty": "消化科",
+    "grade": "2023级",
+    "position": "研究生",
+    "training_type": "专科培训",
+    "self_selected_specialties": []
+  },
+  {
+    "name": "和钰媛",
+    "specialty": "消化科",
+    "grade": "2023级",
+    "position": "研究生",
+    "training_type": "专科培训",
+    "self_selected_specialties": []
+  },
+  {
+    "name": "宋红召",
+    "specialty": "消化科",
+    "grade": "2023级",
+    "position": "研究生",
+    "training_type": "专科培训",
+    "self_selected_specialties": []
+  },
+  {
+    "name": "李彤彤",
+    "specialty": "消化科",
+    "grade": "2023级",
+    "position": "研究生",
+    "training_type": "专科培训",
+    "self_selected_specialties": []
+  },
+  {
+    "name": "马晓萱",
+    "specialty": "消化科",
+    "grade": "2023级",
+    "position": "研究生",
+    "training_type": "专科培训",
+    "self_selected_specialties": []
+  },
+  {
+    "name": "郭芮彤",
+    "specialty": "消化科",
+    "grade": "2023级",
+    "position": "研究生",
+    "training_type": "专科培训",
+    "self_selected_specialties": []
+  },
+  {
+    "name": "李适女",
+    "specialty": "消化科",
+    "grade": "2023级",
+    "position": "研究生",
+    "training_type": "专科培训",
+    "self_selected_specialties": []
+  },
+  {
+    "name": "张沙沙",
+    "specialty": "消化科",
+    "grade": "2023级",
+    "position": "研究生",
+    "training_type": "专科培训",
+    "self_selected_specialties": []
+  },
+  {
+    "name": "乔春娟",
+    "specialty": "消化科",
+    "grade": "2023级",
+    "position": "研究生",
+    "training_type": "专科培训",
+    "self_selected_specialties": []
+  },
+  {
+    "name": "刘梦聪",
+    "specialty": "消化科",
+    "grade": "2023级",
+    "position": "研究生",
+    "training_type": "专科培训",
+    "self_selected_specialties": []
+  },
+  {
+    "name": "张梦函",
+    "specialty": "消化科",
+    "grade": "2023级",
+    "position": "研究生",
+    "training_type": "专科培训",
+    "self_selected_specialties": []
+  },
+  {
+    "name": "张嘉琪",
+    "specialty": "消化科",
+    "grade": "2023级",
+    "position": "研究生",
+    "training_type": "专科培训",
+    "self_selected_specialties": []
+  },
+  {
+    "name": "韩潇逸",
+    "specialty": "消化科",
+    "grade": "2023级",
+    "position": "研究生",
+    "training_type": "专科培训",
+    "self_selected_specialties": []
+  },
+  {
+    "name": "周锋",
+    "specialty": "消化科",
+    "grade": "2023级",
+    "position": "研究生",
+    "training_type": "专科培训",
+    "self_selected_specialties": []
+  },
+  {
+    "name": "李婉如",
+    "specialty": "消化科",
+    "grade": "2023级",
+    "position": "研究生",
+    "training_type": "专科培训",
+    "self_selected_specialties": []
+  },
+  {
+    "name": "韩芳",
+    "specialty": "心内科",
+    "grade": "2023级",
+    "position": "研究生",
+    "training_type": "专科培训",
+    "self_selected_specialties": []
+  },
+  {
+    "name": "杨子珊",
+    "specialty": "心内科",
+    "grade": "2023级",
+    "position": "研究生",
+    "training_type": "专科培训",
+    "self_selected_specialties": []
+  },
+  {
+    "name": "贺丹婷",
+    "specialty": "心内科",
+    "grade": "2023级",
+    "position": "研究生",
+    "training_type": "专科培训",
+    "self_selected_specialties": []
+  },
+  {
+    "name": "王宇婧",
+    "specialty": "心内科",
+    "grade": "2023级",
+    "position": "研究生",
+    "training_type": "专科培训",
+    "self_selected_specialties": []
+  },
+  {
+    "name": "王旭宁",
+    "specialty": "心内科",
+    "grade": "2023级",
+    "position": "研究生",
+    "training_type": "专科培训",
+    "self_selected_specialties": []
+  },
+  {
+    "name": "张策",
+    "specialty": "心内科",
+    "grade": "2023级",
+    "position": "研究生",
+    "training_type": "专科培训",
+    "self_selected_specialties": []
+  },
+  {
+    "name": "童话",
+    "specialty": "心内科",
+    "grade": "2023级",
+    "position": "研究生",
+    "training_type": "专科培训",
+    "self_selected_specialties": []
+  },
+  {
+    "name": "王姝",
+    "specialty": "心内科",
+    "grade": "2023级",
+    "position": "研究生",
+    "training_type": "专科培训",
+    "self_selected_specialties": []
+  },
+  {
+    "name": "段家琦",
+    "specialty": "心内科",
+    "grade": "2023级",
+    "position": "研究生",
+    "training_type": "专科培训",
+    "self_selected_specialties": []
+  },
+  {
+    "name": "张小同",
+    "specialty": "心内科",
+    "grade": "2023级",
+    "position": "研究生",
+    "training_type": "专科培训",
+    "self_selected_specialties": []
+  },
+  {
+    "name": "陆俊彤",
+    "specialty": "心内科",
+    "grade": "2023级",
+    "position": "研究生",
+    "training_type": "专科培训",
+    "self_selected_specialties": []
+  },
+  {
+    "name": "侯雪婷",
+    "specialty": "心内科",
+    "grade": "2023级",
+    "position": "研究生",
+    "training_type": "专科培训",
+    "self_selected_specialties": []
+  },
+  {
+    "name": "肖伟哲",
+    "specialty": "心内科",
+    "grade": "2023级",
+    "position": "住院医",
+    "training_type": "专科培训",
+    "self_selected_specialties": []
+  },
+  {
+    "name": "朱俊麒",
+    "specialty": "心内科",
+    "grade": "2023级",
+    "position": "住院医",
+    "training_type": "专科培训",
+    "self_selected_specialties": []
+  },
+  {
+    "name": "宋碧萱",
+    "specialty": "心内科",
+    "grade": "2023级",
+    "position": "住院医",
+    "training_type": "专科培训",
+    "self_selected_specialties": []
+  },
+  {
+    "name": "孙冰萱",
+    "specialty": "心内科",
+    "grade": "2023级",
+    "position": "住院医",
+    "training_type": "专科培训",
+    "self_selected_specialties": []
+  },
+  {
+    "name": "测试学生1",
+    "specialty": "心内科",
+    "grade": "2023级",
+    "position": "研究生",
+    "training_type": "专科培训",
+    "self_selected_specialties": []
+  }
+]
