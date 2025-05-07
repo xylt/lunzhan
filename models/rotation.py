@@ -76,29 +76,27 @@ class RotationScheduler:
             dept = dept_info["department"]
             if dept.rotation_times > 1:
                 # 第一轮
+                first_month = dept_info["months"][0] if len(dept_info["months"]) > 0 else dept_info["months"][0]
                 first_rotation_departments.append({
                     "department": dept,
-                    "months": dept.months_per_rotation,
+                    "months": first_month,
                     "rotation_order": 1
                 })
                 
                 # 第二轮
-                if dept.name == "心内一科" or dept.name == "心内二科":
-                    # 心内科第二次轮转1.5个月
-                    second_rotation_months = 1.5
-                elif dept.name == "呼吸一科" or dept.name == "呼吸二科":
-                    # 呼吸科第二次轮转2个月
-                    second_rotation_months = 2
-                else:
-                    second_rotation_months = dept.months_per_rotation
-                
+                second_month = dept_info["months"][1] if len(dept_info["months"]) > 1 else dept_info["months"][0]
                 second_rotation_departments.append({
                     "department": dept,
-                    "months": second_rotation_months,
+                    "months": second_month,
                     "rotation_order": 2
                 })
             else:
-                first_rotation_departments.append(dept_info)
+                first_month = dept_info["months"][0] if len(dept_info["months"]) > 0 else 1.0
+                first_rotation_departments.append({
+                    "department": dept_info["department"],
+                    "months": first_month,
+                    "rotation_order": 1
+                })
         
         # 随机打乱科室顺序，但保持相同科室不连续
         random.shuffle(first_rotation_departments)
@@ -163,7 +161,7 @@ class RotationScheduler:
         for dept in all_departments:
             rotation_departments.append({
                 "department": dept,
-                "months": dept.months_per_rotation
+                "months": dept.months_per_rotation.copy() if isinstance(dept.months_per_rotation, list) else [dept.months_per_rotation]
             })
         
         # 处理学生自己的专业（额外多轮转两个月）
@@ -172,7 +170,9 @@ class RotationScheduler:
             # 找到该科室，增加额外的两个月轮转
             for dept_info in rotation_departments:
                 if dept_info["department"].name == dept.name:
-                    dept_info["months"] += 2
+                    # 在第一次轮转的月数上增加2个月
+                    if dept_info["months"] and len(dept_info["months"]) > 0:
+                        dept_info["months"][0] += 2
                     break
         
         # 处理社会培训的自选专业（每个专业额外轮转一个月）
@@ -183,7 +183,9 @@ class RotationScheduler:
                     # 找到该科室，增加额外的一个月轮转
                     for dept_info in rotation_departments:
                         if dept_info["department"].name == dept.name:
-                            dept_info["months"] += 1
+                            # 在第一次轮转的月数上增加1个月
+                            if dept_info["months"] and len(dept_info["months"]) > 0:
+                                dept_info["months"][0] += 1
                             break
         
         return rotation_departments
@@ -191,7 +193,15 @@ class RotationScheduler:
     def _assign_department(self, student_name: str, department: Department, start_date: datetime, months: float) -> datetime:
         """为学生安排指定科室的轮转，返回结束日期"""
         current_date = start_date
-        remaining_months = months
+        
+        # 确保months是浮点数而不是列表
+        if isinstance(months, list):
+            if len(months) > 0:
+                remaining_months = float(months[0])
+            else:
+                remaining_months = 1.0
+        else:
+            remaining_months = float(months)
         
         while remaining_months > 0:
             date_key = current_date.strftime("%Y-%m-%d")
@@ -228,8 +238,16 @@ class RotationScheduler:
             
             # 特殊处理：心内科第二次轮转后接心电图
             if department.name in ["心内一科", "心内二科"] and remaining_months == 0:
-                # 检查是否是第二次轮转（1.5个月）
-                if months == 1.5:
+                # 检查心内科是否设置了轮转月数为1.5（表示第二次轮转后需要接心电图）
+                second_rotation_months = None
+                if len(department.months_per_rotation) > 1:
+                    second_rotation_months = department.months_per_rotation[1]
+                
+                # 判断当前轮转月数是否符合心电图轮转条件
+                current_months = float(months) if not isinstance(months, list) else (months[0] if len(months) > 0 else 0)
+                
+                # 如果是第二次轮转且月数是1.5，自动安排心电图
+                if second_rotation_months == 1.5 and current_months == 1.5:
                     # 安排心电图室0.5个月
                     ekg_dept = None
                     for dept in self.department_manager.get_departments():
@@ -248,12 +266,10 @@ class RotationScheduler:
                             self.schedule[student_name][date_key] = "心电图室"
                         
                         # 更新计数
-                        if date_key in self.department_counts["心电图室"]:
-                            self.department_counts["心电图室"][date_key] += 0.5
-                        
-                        # 移动日期半个月
-                        current_date = current_date + timedelta(days=15)
-        
+                        if date_key in self.department_counts.get("心电图室", {}):
+                            self.department_counts["心电图室"][date_key] += 1
+                            
+        # 返回当前日期作为结束日期
         return current_date
     
     def export_to_excel(self, file_path: str, grade: str):
