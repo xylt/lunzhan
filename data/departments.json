@@ -3,119 +3,157 @@
     "name": "心内一科",
     "specialty": "心内科",
     "rotation_times": 2,
-    "months_per_rotation": 2.0,
+    "months_per_rotation": [
+      2.0,
+      1.5
+    ],
     "is_later_rotation": false
   },
   {
     "name": "心内二科",
     "specialty": "心内科",
     "rotation_times": 2,
-    "months_per_rotation": 2.0,
+    "months_per_rotation": [
+      2.0,
+      1.5
+    ],
     "is_later_rotation": false
   },
   {
     "name": "心电图室",
     "specialty": "心内科",
     "rotation_times": 1,
-    "months_per_rotation": 0.5,
+    "months_per_rotation": [
+      0.5
+    ],
     "is_later_rotation": false
   },
   {
     "name": "呼吸一科",
     "specialty": "呼吸内科",
     "rotation_times": 2,
-    "months_per_rotation": 1.0,
+    "months_per_rotation": [
+      1.0,
+      2.0
+    ],
     "is_later_rotation": false
   },
   {
     "name": "呼吸二科",
     "specialty": "呼吸内科",
     "rotation_times": 2,
-    "months_per_rotation": 1.0,
+    "months_per_rotation": [
+      1.0,
+      2.0
+    ],
     "is_later_rotation": false
   },
   {
     "name": "消化科",
     "specialty": "消化科",
     "rotation_times": 1,
-    "months_per_rotation": 1.0,
+    "months_per_rotation": [
+      1.0
+    ],
     "is_later_rotation": false
   },
   {
     "name": "中西医肝病科",
     "specialty": "肝病科",
     "rotation_times": 1,
-    "months_per_rotation": 2.0,
+    "months_per_rotation": [
+      2.0
+    ],
     "is_later_rotation": false
   },
   {
     "name": "急诊科",
     "specialty": "急诊科",
     "rotation_times": 1,
-    "months_per_rotation": 3.0,
+    "months_per_rotation": [
+      3.0
+    ],
     "is_later_rotation": true
   },
   {
     "name": "感染科",
     "specialty": "感染科",
     "rotation_times": 1,
-    "months_per_rotation": 2.0,
+    "months_per_rotation": [
+      2.0
+    ],
     "is_later_rotation": false
   },
   {
     "name": "风湿科",
     "specialty": "风湿科",
     "rotation_times": 1,
-    "months_per_rotation": 2.0,
+    "months_per_rotation": [
+      2.0
+    ],
     "is_later_rotation": false
   },
   {
     "name": "肾内科",
     "specialty": "肾内科",
     "rotation_times": 1,
-    "months_per_rotation": 2.0,
+    "months_per_rotation": [
+      2.0
+    ],
     "is_later_rotation": false
   },
   {
     "name": "血液科",
     "specialty": "血液科",
     "rotation_times": 1,
-    "months_per_rotation": 2.0,
+    "months_per_rotation": [
+      2.0
+    ],
     "is_later_rotation": false
   },
   {
     "name": "内分泌科",
     "specialty": "内分泌科",
     "rotation_times": 1,
-    "months_per_rotation": 2.0,
+    "months_per_rotation": [
+      2.0
+    ],
     "is_later_rotation": false
   },
   {
     "name": "神经内科",
     "specialty": "神经内科",
     "rotation_times": 1,
-    "months_per_rotation": 2.0,
+    "months_per_rotation": [
+      2.0
+    ],
     "is_later_rotation": false
   },
   {
     "name": "重症医学科",
     "specialty": "重症医学科",
     "rotation_times": 1,
-    "months_per_rotation": 2.0,
+    "months_per_rotation": [
+      2.0
+    ],
     "is_later_rotation": true
   },
   {
     "name": "肿瘤科",
     "specialty": "肿瘤科",
     "rotation_times": 1,
-    "months_per_rotation": 2.0,
+    "months_per_rotation": [
+      2.0
+    ],
     "is_later_rotation": false
   },
   {
     "name": "老年病科",
     "specialty": "老年病科",
     "rotation_times": 1,
-    "months_per_rotation": 2.0,
+    "months_per_rotation": [
+      2.0
+    ],
     "is_later_rotation": false
   }
 ]

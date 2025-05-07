@@ -1,7 +1,7 @@
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
                              QLineEdit, QComboBox, QPushButton, QTableWidget, 
                              QTableWidgetItem, QMessageBox, QHeaderView, 
-                             QGroupBox, QDoubleSpinBox, QCheckBox)
+                             QGroupBox, QDoubleSpinBox, QCheckBox, QScrollArea)
 from PyQt6.QtGui import QFont
 from PyQt6.QtCore import Qt, pyqtSignal
 
@@ -48,29 +48,24 @@ class DepartmentPage(QWidget):
         # 表单布局 - 第二行
         form_layout2 = QHBoxLayout()
         
-        # 轮转次数
-        form_layout2.addWidget(QLabel("轮转次数:"))
-        self.rotation_times_spin = QDoubleSpinBox()
-        self.rotation_times_spin.setMinimum(1)
-        self.rotation_times_spin.setMaximum(5)
-        self.rotation_times_spin.setDecimals(0)
-        self.rotation_times_spin.setValue(1)
-        form_layout2.addWidget(self.rotation_times_spin)
-        
-        # 每次轮转月数
-        form_layout2.addWidget(QLabel("轮转月数:"))
-        self.months_spin = QDoubleSpinBox()
-        self.months_spin.setMinimum(0.5)
-        self.months_spin.setMaximum(12)
-        self.months_spin.setSingleStep(0.5)
-        self.months_spin.setValue(1)
-        form_layout2.addWidget(self.months_spin)
+        # 轮转配置 (格式: "2/1.5" 表示两次轮转,分别为2个月和1.5个月)
+        form_layout2.addWidget(QLabel("轮转配置(次数/月数):"))
+        self.rotation_config_input = QLineEdit()
+        self.rotation_config_input.setToolTip("格式: \"2/1.5\" 表示两次轮转,分别为2个月和1.5个月")
+        self.rotation_config_input.setPlaceholderText("例如: 2/1.5 或 1/2")
+        form_layout2.addWidget(self.rotation_config_input)
         
         # 后期轮转
         self.later_rotation_check = QCheckBox("后期轮转（第一年后）")
         form_layout2.addWidget(self.later_rotation_check)
         
+        # 添加到输入布局
         input_layout.addLayout(form_layout2)
+        
+        # 添加说明标签
+        hint_label = QLabel("轮转配置格式说明: 2/1.5 表示需要轮转2次，第一次2个月，第二次1.5个月")
+        hint_label.setStyleSheet("color: gray; font-style: italic;")
+        input_layout.addWidget(hint_label)
         
         # 按钮布局
         button_layout = QHBoxLayout()
@@ -108,7 +103,7 @@ class DepartmentPage(QWidget):
         self.department_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self.department_table.setColumnCount(5)
         self.department_table.setHorizontalHeaderLabels([
-            "科室名称", "科室专业", "轮转次数", "每次轮转月数", "后期轮转"
+            "科室名称", "科室专业", "轮转次数", "轮转月数配置", "后期轮转"
         ])
         self.department_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
         self.department_table.clicked.connect(self._on_department_selected)
@@ -118,6 +113,61 @@ class DepartmentPage(QWidget):
         # 保存当前编辑的科室索引
         self.current_edit_index = -1
     
+    def _parse_rotation_config(self, config_text):
+        """解析轮转配置文本，返回(轮转次数, [月数列表])"""
+        try:
+            # 移除所有空格
+            config_text = config_text.strip().replace(" ", "")
+            
+            if "/" not in config_text:
+                # 如果只有一个数字，解释为一次轮转对应的月数
+                try:
+                    months = float(config_text)
+                    return 1, [months]
+                except ValueError:
+                    return None, None
+            
+            # 解析格式为"2/1.5"的情况
+            parts = config_text.split("/")
+            
+            # 尝试将第一部分解析为轮转次数
+            try:
+                rotation_times = int(parts[0])
+            except ValueError:
+                return None, None
+                
+            if rotation_times <= 0:
+                return None, None
+                
+            # 解析后续的月数
+            months_per_rotation = []
+            for i in range(1, len(parts)):
+                try:
+                    months = float(parts[i])
+                    if months <= 0:
+                        return None, None
+                    months_per_rotation.append(months)
+                except ValueError:
+                    return None, None
+            
+            # 如果没有提供足够的月数，使用最后一个月数填充
+            if len(months_per_rotation) < rotation_times:
+                last_month = months_per_rotation[-1] if months_per_rotation else 1.0
+                while len(months_per_rotation) < rotation_times:
+                    months_per_rotation.append(last_month)
+            
+            # 返回解析结果
+            return rotation_times, months_per_rotation
+        except Exception:
+            return None, None
+    
+    def _format_rotation_config(self, rotation_times, months_per_rotation):
+        """将轮转次数和月数列表格式化为配置文本"""
+        if not rotation_times or not months_per_rotation:
+            return ""
+        
+        return f"{rotation_times}/{'/'.join(str(m) for m in months_per_rotation)}"
+        
     def _refresh_department_table(self):
         """刷新科室表格"""
         self.department_table.setRowCount(0)
@@ -128,7 +178,10 @@ class DepartmentPage(QWidget):
             self.department_table.setItem(row, 0, QTableWidgetItem(department.name))
             self.department_table.setItem(row, 1, QTableWidgetItem(department.specialty))
             self.department_table.setItem(row, 2, QTableWidgetItem(str(department.rotation_times)))
-            self.department_table.setItem(row, 3, QTableWidgetItem(str(department.months_per_rotation)))
+            
+            # 显示每次轮转月数配置，使用简洁格式"2/1.5"表示第一次2个月第二次1.5个月
+            months_text = "/".join([str(m) for m in department.months_per_rotation])
+            self.department_table.setItem(row, 3, QTableWidgetItem(months_text))
             
             # 后期轮转显示为"是"或"否"
             is_later = "是" if department.is_later_rotation else "否"
@@ -138,27 +191,32 @@ class DepartmentPage(QWidget):
         """添加科室"""
         name = self.name_input.text().strip()
         specialty = self.specialty_input.text().strip()
-        rotation_times = int(self.rotation_times_spin.value())
-        months = float(self.months_spin.value())
+        rotation_config = self.rotation_config_input.text().strip()
         is_later_rotation = self.later_rotation_check.isChecked()
         
-        # 验证
+        # 验证基本信息
         if not name or not specialty:
             QMessageBox.warning(self, "提示", "请输入科室名称和专业")
             return
-            
+        
         # 检查是否已存在同名科室
         for dept in self.department_manager.get_departments():
             if dept.name == name:
                 QMessageBox.warning(self, "提示", f"科室 '{name}' 已存在")
                 return
         
+        # 解析轮转配置
+        rotation_times, months_per_rotation = self._parse_rotation_config(rotation_config)
+        if rotation_times is None or months_per_rotation is None:
+            QMessageBox.warning(self, "提示", "轮转配置格式错误，请使用如'2/1.5'的格式")
+            return
+        
         # 创建科室对象
         department = Department(
             name=name,
             specialty=specialty,
             rotation_times=rotation_times,
-            months_per_rotation=months,
+            months_per_rotation=months_per_rotation,
             is_later_rotation=is_later_rotation
         )
         
@@ -181,11 +239,10 @@ class DepartmentPage(QWidget):
             
         name = self.name_input.text().strip()
         specialty = self.specialty_input.text().strip()
-        rotation_times = int(self.rotation_times_spin.value())
-        months = float(self.months_spin.value())
+        rotation_config = self.rotation_config_input.text().strip()
         is_later_rotation = self.later_rotation_check.isChecked()
         
-        # 验证
+        # 验证基本信息
         if not name or not specialty:
             QMessageBox.warning(self, "提示", "请输入科室名称和专业")
             return
@@ -197,12 +254,18 @@ class DepartmentPage(QWidget):
                 QMessageBox.warning(self, "提示", f"科室 '{name}' 已存在")
                 return
         
+        # 解析轮转配置
+        rotation_times, months_per_rotation = self._parse_rotation_config(rotation_config)
+        if rotation_times is None or months_per_rotation is None:
+            QMessageBox.warning(self, "提示", "轮转配置格式错误，请使用如'2/1.5'的格式")
+            return
+        
         # 创建科室对象
         department = Department(
             name=name,
             specialty=specialty,
             rotation_times=rotation_times,
-            months_per_rotation=months,
+            months_per_rotation=months_per_rotation,
             is_later_rotation=is_later_rotation
         )
         
@@ -272,8 +335,11 @@ class DepartmentPage(QWidget):
         # 填充输入框
         self.name_input.setText(department.name)
         self.specialty_input.setText(department.specialty)
-        self.rotation_times_spin.setValue(department.rotation_times)
-        self.months_spin.setValue(department.months_per_rotation)
+        
+        # 设置轮转配置
+        config_text = f"{department.rotation_times}/{'/'.join([str(m) for m in department.months_per_rotation])}"
+        self.rotation_config_input.setText(config_text)
+        
         self.later_rotation_check.setChecked(department.is_later_rotation)
         
         # 启用按钮
@@ -286,8 +352,7 @@ class DepartmentPage(QWidget):
         """清空输入"""
         self.name_input.clear()
         self.specialty_input.clear()
-        self.rotation_times_spin.setValue(1)
-        self.months_spin.setValue(1)
+        self.rotation_config_input.clear()
         self.later_rotation_check.setChecked(False)
         self.current_edit_index = -1
     
