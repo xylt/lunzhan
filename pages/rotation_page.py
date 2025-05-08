@@ -206,7 +206,7 @@ class RotationPage(QWidget):
         
         self.grade_combo = QComboBox()
         self.grade_combo.setStyleSheet(input_style)
-        self.grade_combo.addItems(["2023级", "2024级", "2025级"])
+        self.grade_combo.addItems(["2023级", "2024级", "2025级", "2026级", "2027级", "2028级"])
         settings_layout.addWidget(self.grade_combo, 0, 1)
         
         # 开始日期
@@ -365,32 +365,27 @@ class RotationPage(QWidget):
         main_layout.setStretch(0, 1)  # 设置区域占比较小
         main_layout.setStretch(1, 4)  # 标签页区域占比较大
     
-    def _calculate_total_months(self, grade):
+    def _calculate_base_months(self, grade):
         """根据科室配置计算总轮转月数"""
         department_manager = self.department_page.get_department_manager()
         departments = department_manager.get_departments()
         
-        # 默认总月数为36个月
-        default_months = 36
+        # 默认基础月数为0个月
+        default_months = 0
         
         if not departments:
             return default_months
             
         # 计算所有科室的总轮转月数
         total_months = 0
+        calculated_specialties = set()
         for dept in departments:
             # 获取科室总月数
             if hasattr(dept, 'get_total_months'):
-                total_months += dept.get_total_months()
-            else:
-                # 兼容旧版本
-                if isinstance(dept.months_per_rotation, list):
-                    total_months += sum(dept.months_per_rotation)
-                else:
-                    total_months += dept.months_per_rotation * dept.rotation_times
-        
-        # 确保总月数在合理范围内
-        total_months = max(12, min(48, total_months))
+                # 如果已经遍历过科室的专业，不再计算
+                if dept.specialty not in calculated_specialties:
+                    total_months += dept.get_total_months()
+                    calculated_specialties.add(dept.specialty)
         
         return int(total_months)
     
@@ -401,8 +396,8 @@ class RotationPage(QWidget):
             grade = self.grade_combo.currentText()
             start_date = self.start_date_edit.date().toPyDate()
             
-            # 计算总轮转月数
-            months = self._calculate_total_months(grade)
+            # 计算基础轮转月数
+            months = self._calculate_base_months(grade)
             
             # 创建调度器
             student_manager = self.student_page.get_student_manager()
@@ -417,7 +412,7 @@ class RotationPage(QWidget):
                 return
             
             # 显示正在生成
-            QMessageBox.information(self, "提示", f"正在生成{months}个月的排期，可能需要等待几秒钟...")
+           # QMessageBox.information(self, "提示", f"正在生成{months}个月的排期，可能需要等待几秒钟...")
             
             # 创建调度器并生成排期
             self.scheduler = RotationScheduler(student_manager, department_manager)

@@ -18,39 +18,18 @@ class RotationScheduler:
         
     def _calculate_total_rotation_months(self, student: Student) -> int:
         """计算该学生需要的总轮转月数"""
-        # 专科培训固定33个月
-        if student.training_type == "专科培训":
-            return 33
-            
         departments = self.department_manager.get_departments()
+            
+        # 计算所有科室的基础轮转月数
         total_months = 0
-        
-        # 记录已计算的专业，避免重复计算
-        counted_specialties = set()
-        
+        calculated_specialties = set()
         for dept in departments:
-            # 如果该专业已经计算过，跳过
-            if dept.specialty in counted_specialties:
-                continue
-                
-            # 添加到已计算专业集合
-            counted_specialties.add(dept.specialty)
-            
-            # 获取该专业的所有科室
-            specialty_depts = [d for d in departments if d.specialty == dept.specialty]
-            
-            # 选择轮转月数最多的科室作为代表
-            main_dept = max(specialty_depts, 
-                          key=lambda d: sum(d.months_per_rotation) if isinstance(d.months_per_rotation, list) 
-                                      else d.months_per_rotation * d.rotation_times)
-            
-            # 计算该专业的轮转月数
-            if isinstance(main_dept.months_per_rotation, list):
-                specialty_months = sum(main_dept.months_per_rotation)
-            else:
-                specialty_months = main_dept.months_per_rotation * main_dept.rotation_times
-                
-            total_months += specialty_months
+            # 获取科室总月数
+            if hasattr(dept, 'get_total_months'):
+                # 如果已经遍历过科室的专业，不再计算
+                if dept.specialty not in calculated_specialties:
+                    total_months += dept.get_total_months()
+                    calculated_specialties.add(dept.specialty)
         
         # 学生自己的专业额外增加2个月
         total_months += 2

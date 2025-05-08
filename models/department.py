@@ -87,7 +87,7 @@ class DepartmentManager:
             # 心内科 (两次轮转)
             self.add_department(Department("心内一科", "心内科", 2, [2.0, 1.5]))  # 第一次轮转2个月，第二次1.5个月
             self.add_department(Department("心内二科", "心内科", 2, [2.0, 2.0]))  # 两次轮转均为2个月
-            self.add_department(Department("心电图室", "心内科", 1, 0.5))  # 轮转0.5个月
+            self.add_department(Department("心电图室", "心电图室", 1, 0.5))  # 轮转0.5个月
             
             # 呼吸内科 (两次轮转)
             self.add_department(Department("呼吸一科", "呼吸内科", 2, 1.0))  # 两次轮转均为1个月
@@ -95,7 +95,7 @@ class DepartmentManager:
             
             # 消化科和中西医肝病科
             self.add_department(Department("消化科", "消化科", 1, 1.0))
-            self.add_department(Department("中西医肝病科", "肝病科", 1, 2.0))
+            self.add_department(Department("中西医肝病科", "中西医肝病科", 1, 2.0))
             
             # 急诊科 (3个月轮转)
             self.add_department(Department("急诊科", "急诊科", 1, 3.0))
