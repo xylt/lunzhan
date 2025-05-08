@@ -1,8 +1,8 @@
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
                              QLineEdit, QComboBox, QPushButton, QTableWidget, 
                              QTableWidgetItem, QFileDialog, QMessageBox, 
-                             QHeaderView, QGroupBox)
-from PyQt6.QtGui import QFont, QColor
+                             QHeaderView, QGroupBox, QGridLayout, QFrame)
+from PyQt6.QtGui import QFont, QColor, QPalette
 from PyQt6.QtCore import Qt, pyqtSignal
 
 import os
@@ -32,100 +32,216 @@ class StudentPage(QWidget):
         # === 1. 学生信息输入区域 ===
         input_group = QGroupBox("学生信息录入")
         input_group.setFont(QFont("Microsoft YaHei", 10, QFont.Weight.Bold))
+        input_group.setStyleSheet("""
+            QGroupBox {
+                background-color: #f5f5f5;
+                border: 1px solid #dcdcdc;
+                border-radius: 6px;
+                margin-top: 10px;
+            }
+            QGroupBox::title {
+                subcontrol-origin: margin;
+                left: 10px;
+                padding: 0 5px 0 5px;
+                background-color: #f5f5f5;
+            }
+        """)
         input_layout = QVBoxLayout(input_group)
         
-        # 表单布局 - 第一行
-        form_layout1 = QHBoxLayout()
+        # 使用网格布局替代原来的两行水平布局
+        form_layout = QGridLayout()
+        form_layout.setVerticalSpacing(10)
+        form_layout.setHorizontalSpacing(15)
+        
+        # 创建标签样式
+        label_style = """
+            QLabel {
+                font-weight: bold;
+                color: #444444;
+            }
+        """
+        
+        # 创建输入控件样式
+        input_style = """
+            QLineEdit, QComboBox {
+                padding: 6px;
+                border: 1px solid #cccccc;
+                border-radius: 4px;
+                background-color: white;
+                color: #333333;
+                min-height: 25px;
+            }
+            QLineEdit:focus, QComboBox:focus {
+                border: 1px solid #66afe9;
+                outline: 0;
+                box-shadow: 0 0 8px rgba(102, 175, 233, 0.6);
+            }
+            QComboBox::drop-down {
+                subcontrol-origin: padding;
+                subcontrol-position: top right;
+                width: 20px;
+                border-left: 1px solid #cccccc;
+                border-top-right-radius: 3px;
+                border-bottom-right-radius: 3px;
+            }
+            QComboBox QAbstractItemView {
+                background-color: white;
+                color: #333333;
+                selection-background-color: #66afe9;
+                selection-color: white;
+            }
+        """
         
         # 姓名
-        form_layout1.addWidget(QLabel("姓名:"))
+        name_label = QLabel("姓名:")
+        name_label.setStyleSheet(label_style)
+        form_layout.addWidget(name_label, 0, 0)
+        
         self.name_input = QLineEdit()
-        form_layout1.addWidget(self.name_input)
+        self.name_input.setStyleSheet(input_style)
+        self.name_input.setPlaceholderText("请输入学生姓名")
+        form_layout.addWidget(self.name_input, 0, 1)
         
         # 专业
-        form_layout1.addWidget(QLabel("专业:"))
+        spec_label = QLabel("专业:")
+        spec_label.setStyleSheet(label_style)
+        form_layout.addWidget(spec_label, 0, 2)
+        
         self.specialty_combo = QComboBox()
-        self.specialty_combo.setMinimumWidth(150)
+        self.specialty_combo.setStyleSheet(input_style)
+        self.specialty_combo.setMinimumWidth(120)
         self._populate_specialty_combo()
-        form_layout1.addWidget(self.specialty_combo)
+        form_layout.addWidget(self.specialty_combo, 0, 3)
         
         # 年级
-        form_layout1.addWidget(QLabel("年级:"))
+        grade_label = QLabel("年级:")
+        grade_label.setStyleSheet(label_style)
+        form_layout.addWidget(grade_label, 0, 4)
+        
         self.grade_combo = QComboBox()
+        self.grade_combo.setStyleSheet(input_style)
         self.grade_combo.addItems(["2023级", "2024级", "2025级"])
-        form_layout1.addWidget(self.grade_combo)
+        form_layout.addWidget(self.grade_combo, 0, 5)
         
         # 职位
-        form_layout1.addWidget(QLabel("职位:"))
+        pos_label = QLabel("职位:")
+        pos_label.setStyleSheet(label_style)
+        form_layout.addWidget(pos_label, 0, 6)
+        
         self.position_combo = QComboBox()
+        self.position_combo.setStyleSheet(input_style)
         self.position_combo.addItems(["研究生", "住院医师", "其他"])
-        form_layout1.addWidget(self.position_combo)
-        
-        input_layout.addLayout(form_layout1)
-        
-        # 表单布局 - 第二行
-        form_layout2 = QHBoxLayout()
+        form_layout.addWidget(self.position_combo, 0, 7)
         
         # 培训方式
-        form_layout2.addWidget(QLabel("培训方式:"))
+        train_label = QLabel("培训方式:")
+        train_label.setStyleSheet(label_style)
+        form_layout.addWidget(train_label, 0, 8)
+        
         self.training_type_combo = QComboBox()
+        self.training_type_combo.setStyleSheet(input_style)
         self.training_type_combo.addItems(["专科培训", "社会培训"])
         self.training_type_combo.currentTextChanged.connect(self._on_training_type_changed)
-        form_layout2.addWidget(self.training_type_combo)
+        form_layout.addWidget(self.training_type_combo, 0, 9)
         
-        # 自选专业 (初始隐藏)
+        # 自选专业 (社会培训选项)
         self.self_selected_label1 = QLabel("自选专业1:")
+        self.self_selected_label1.setStyleSheet(label_style)
         self.self_selected_label1.setVisible(False)
-        form_layout2.addWidget(self.self_selected_label1)
+        form_layout.addWidget(self.self_selected_label1, 0, 10)
         
         self.self_selected_combo1 = QComboBox()
-        self.self_selected_combo1.setMinimumWidth(150)
+        self.self_selected_combo1.setStyleSheet(input_style)
+        self.self_selected_combo1.setMinimumWidth(120)
         self.self_selected_combo1.setVisible(False)
         self._populate_specialty_combo(self.self_selected_combo1)
-        form_layout2.addWidget(self.self_selected_combo1)
+        form_layout.addWidget(self.self_selected_combo1, 0, 11)
         
         self.self_selected_label2 = QLabel("自选专业2:")
+        self.self_selected_label2.setStyleSheet(label_style)
         self.self_selected_label2.setVisible(False)
-        form_layout2.addWidget(self.self_selected_label2)
+        form_layout.addWidget(self.self_selected_label2, 0, 12)
         
         self.self_selected_combo2 = QComboBox()
-        self.self_selected_combo2.setMinimumWidth(150)
+        self.self_selected_combo2.setStyleSheet(input_style)
+        self.self_selected_combo2.setMinimumWidth(120)
         self.self_selected_combo2.setVisible(False)
         self._populate_specialty_combo(self.self_selected_combo2)
-        form_layout2.addWidget(self.self_selected_combo2)
+        form_layout.addWidget(self.self_selected_combo2, 0, 13)
         
-        input_layout.addLayout(form_layout2)
+        input_layout.addLayout(form_layout)
+        
+        # 分隔线
+        line = QFrame()
+        line.setFrameShape(QFrame.Shape.HLine)
+        line.setFrameShadow(QFrame.Shadow.Sunken)
+        line.setStyleSheet("background-color: #cccccc;")
+        input_layout.addWidget(line)
         
         # 按钮布局
         button_layout = QHBoxLayout()
+        button_layout.setContentsMargins(10, 5, 10, 5)
+        button_layout.setSpacing(10)
+        
+        # 按钮样式
+        button_style = """
+            QPushButton {
+                padding: 4px 12px;
+                font-weight: bold;
+                border-radius: 3px;
+                min-width: 80px;
+                min-height: 24px;
+                background-color: #f0f0f0;
+                color: #333333;
+                border: 1px solid #cccccc;
+            }
+            QPushButton:hover {
+                background-color: #e0e0e0;
+            }
+            QPushButton:pressed {
+                background-color: #d0d0d0;
+            }
+            QPushButton:disabled {
+                background-color: #f5f5f5;
+                color: #999999;
+                border: 1px solid #dddddd;
+            }
+        """
         
         # 添加按钮
         self.add_button = QPushButton("添加")
+        self.add_button.setStyleSheet(button_style)
         self.add_button.clicked.connect(self._add_student)
         button_layout.addWidget(self.add_button)
         
         # 修改按钮
         self.update_button = QPushButton("修改")
+        self.update_button.setStyleSheet(button_style)
         self.update_button.clicked.connect(self._update_student)
         self.update_button.setEnabled(False)
         button_layout.addWidget(self.update_button)
         
         # 删除按钮
         self.delete_button = QPushButton("删除")
+        self.delete_button.setStyleSheet(button_style)
         self.delete_button.clicked.connect(self._delete_student)
         self.delete_button.setEnabled(False)
         button_layout.addWidget(self.delete_button)
         
         # 取消按钮
         self.cancel_button = QPushButton("取消")
+        self.cancel_button.setStyleSheet(button_style)
         self.cancel_button.clicked.connect(self._cancel_edit)
         self.cancel_button.setEnabled(False)
         button_layout.addWidget(self.cancel_button)
         
         # 导入Excel
         self.import_button = QPushButton("导入Excel")
+        self.import_button.setStyleSheet(button_style)
         self.import_button.clicked.connect(self._import_excel)
         button_layout.addWidget(self.import_button)
+        
+        button_layout.addStretch()
         
         input_layout.addLayout(button_layout)
         
@@ -138,6 +254,29 @@ class StudentPage(QWidget):
         self.student_table.setColumnCount(6)
         self.student_table.setHorizontalHeaderLabels(["姓名", "专业", "年级", "职位", "培训方式", "自选专业"])
         self.student_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        self.student_table.setStyleSheet("""
+            QTableWidget {
+                background-color: white;
+                alternate-background-color: #f9f9f9;
+                border: 1px solid #dddddd;
+                border-radius: 4px;
+                gridline-color: #dddddd;
+            }
+            QTableWidget::item {
+                padding: 6px;
+            }
+            QTableWidget::item:selected {
+                background-color: #66afe9;
+                color: white;
+            }
+            QHeaderView::section {
+                background-color: #f0f0f0;
+                padding: 6px;
+                border: 1px solid #dddddd;
+                font-weight: bold;
+            }
+        """)
+        self.student_table.setAlternatingRowColors(True)
         self.student_table.clicked.connect(self._on_student_selected)
         
         main_layout.addWidget(self.student_table)

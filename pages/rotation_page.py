@@ -1,7 +1,8 @@
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
                              QPushButton, QTableWidget, QTableWidgetItem, 
                              QFileDialog, QMessageBox, QHeaderView, QGroupBox, 
-                             QComboBox, QDateEdit, QSpinBox, QScrollArea)
+                             QComboBox, QDateEdit, QSpinBox, QScrollArea,
+                             QFrame, QGridLayout)
 from PyQt6.QtGui import QFont, QColor, QPainter, QBrush
 from PyQt6.QtCore import Qt, QDate, pyqtSlot, QSize
 
@@ -23,6 +24,30 @@ class GanttChartTable(QTableWidget):
         self.setSizeAdjustPolicy(QTableWidget.SizeAdjustPolicy.AdjustToContents)
         self.setHorizontalScrollMode(QTableWidget.ScrollMode.ScrollPerPixel)
         self.setVerticalScrollMode(QTableWidget.ScrollMode.ScrollPerPixel)
+        
+        # 设置表格样式
+        self.setStyleSheet("""
+            QTableWidget {
+                background-color: white;
+                alternate-background-color: #f9f9f9;
+                border: 1px solid #dddddd;
+                border-radius: 4px;
+                gridline-color: #dddddd;
+            }
+            QTableWidget::item {
+                padding: 6px;
+            }
+            QTableWidget::item:selected {
+                background-color: #66afe9;
+                color: white;
+            }
+            QHeaderView::section {
+                background-color: #f0f0f0;
+                padding: 6px;
+                border: 1px solid #dddddd;
+                font-weight: bold;
+            }
+        """)
         
         # 设置一些颜色映射，用于不同科室显示不同颜色
         self.specialty_colors = {}
@@ -74,31 +99,124 @@ class RotationPage(QWidget):
         # === 1. 轮转设置区域 ===
         settings_group = QGroupBox("轮转排期设置")
         settings_group.setFont(QFont("Microsoft YaHei", 10, QFont.Weight.Bold))
-        settings_layout = QHBoxLayout(settings_group)
+        settings_group.setStyleSheet("""
+            QGroupBox {
+                background-color: #f5f5f5;
+                border: 1px solid #dcdcdc;
+                border-radius: 6px;
+                margin-top: 10px;
+            }
+            QGroupBox::title {
+                subcontrol-origin: margin;
+                left: 10px;
+                padding: 0 5px 0 5px;
+                background-color: #f5f5f5;
+            }
+        """)
+        
+        # 使用网格布局代替水平布局，以保持与其他页面的一致性
+        settings_layout = QGridLayout(settings_group)
+        settings_layout.setVerticalSpacing(10)
+        settings_layout.setHorizontalSpacing(15)
+        
+        # 创建标签样式
+        label_style = """
+            QLabel {
+                font-weight: bold;
+                color: #444444;
+            }
+        """
+        
+        # 创建输入控件样式
+        input_style = """
+            QLineEdit, QComboBox, QDateEdit {
+                padding: 6px;
+                border: 1px solid #cccccc;
+                border-radius: 4px;
+                background-color: white;
+                color: #333333;
+                min-height: 25px;
+            }
+            QLineEdit:focus, QComboBox:focus, QDateEdit:focus {
+                border: 1px solid #66afe9;
+                outline: 0;
+                box-shadow: 0 0 8px rgba(102, 175, 233, 0.6);
+            }
+            QComboBox::drop-down, QDateEdit::drop-down {
+                subcontrol-origin: padding;
+                subcontrol-position: top right;
+                width: 20px;
+                border-left: 1px solid #cccccc;
+            }
+            QComboBox QAbstractItemView {
+                background-color: white;
+                color: #333333;
+                selection-background-color: #66afe9;
+                selection-color: white;
+            }
+        """
         
         # 年级选择
-        settings_layout.addWidget(QLabel("年级:"))
+        grade_label = QLabel("年级:")
+        grade_label.setStyleSheet(label_style)
+        settings_layout.addWidget(grade_label, 0, 0)
+        
         self.grade_combo = QComboBox()
+        self.grade_combo.setStyleSheet(input_style)
         self.grade_combo.addItems(["2023级", "2024级", "2025级"])
-        settings_layout.addWidget(self.grade_combo)
+        settings_layout.addWidget(self.grade_combo, 0, 1)
         
         # 开始日期
-        settings_layout.addWidget(QLabel("开始日期:"))
+        date_label = QLabel("开始日期:")
+        date_label.setStyleSheet(label_style)
+        settings_layout.addWidget(date_label, 0, 2)
+        
         self.start_date_edit = QDateEdit()
+        self.start_date_edit.setStyleSheet(input_style)
         self.start_date_edit.setDisplayFormat("yyyy-MM-dd")
         self.start_date_edit.setDate(QDate.currentDate().addMonths(-QDate.currentDate().month() % 12 + 1))  # 设为当年9月1日
-        settings_layout.addWidget(self.start_date_edit)
+        settings_layout.addWidget(self.start_date_edit, 0, 3)
+        
+        # 按钮样式
+        button_style = """
+            QPushButton {
+                padding: 4px 12px;
+                font-weight: bold;
+                border-radius: 3px;
+                min-width: 80px;
+                min-height: 24px;
+                background-color: #f0f0f0;
+                color: #333333;
+                border: 1px solid #cccccc;
+            }
+            QPushButton:hover {
+                background-color: #e0e0e0;
+            }
+            QPushButton:pressed {
+                background-color: #d0d0d0;
+            }
+            QPushButton:disabled {
+                background-color: #f5f5f5;
+                color: #999999;
+                border: 1px solid #dddddd;
+            }
+        """
         
         # 生成排期按钮
         self.generate_button = QPushButton("生成排期")
+        self.generate_button.setStyleSheet(button_style)
         self.generate_button.clicked.connect(self._generate_schedule)
-        settings_layout.addWidget(self.generate_button)
+        settings_layout.addWidget(self.generate_button, 0, 4)
         
         # 导出Excel按钮
         self.export_button = QPushButton("导出Excel")
+        self.export_button.setStyleSheet(button_style)
         self.export_button.clicked.connect(self._export_excel)
         self.export_button.setEnabled(False)
-        settings_layout.addWidget(self.export_button)
+        settings_layout.addWidget(self.export_button, 0, 5)
+        
+        # 添加一个弹性空间
+        settings_layout.setColumnStretch(6, 1)
         
         main_layout.addWidget(settings_group)
         
@@ -110,6 +228,25 @@ class RotationPage(QWidget):
         scroll_area = QScrollArea()
         scroll_area.setWidgetResizable(True)
         scroll_area.setWidget(self.schedule_table)
+        scroll_area.setStyleSheet("""
+            QScrollArea {
+                border: none;
+                background-color: transparent;
+            }
+            QScrollBar:horizontal {
+                height: 15px;
+            }
+            QScrollBar:vertical {
+                width: 15px;
+            }
+            QScrollBar::handle {
+                background: #bbbbbb;
+                border-radius: 4px;
+            }
+            QScrollBar::handle:hover {
+                background: #999999;
+            }
+        """)
         
         main_layout.addWidget(scroll_area)
         
