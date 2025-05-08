@@ -21,7 +21,7 @@
   },
   {
     "name": "心电图室",
-    "specialty": "心内科",
+    "specialty": "心电图室",
     "rotation_times": 1,
     "months_per_rotation": [
       0.5
@@ -59,7 +59,7 @@
   },
   {
     "name": "中西医肝病科",
-    "specialty": "肝病科",
+    "specialty": "中西医肝病科",
     "rotation_times": 1,
     "months_per_rotation": [
       2.0
