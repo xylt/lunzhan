@@ -639,14 +639,13 @@ class RotationPage(QWidget):
             
             # 设置表格
             self.dept_month_table.setRowCount(len(sorted_departments))
-            self.dept_month_table.setColumnCount(len(sorted_months))  
+            self.dept_month_table.setColumnCount(len(sorted_months))
             
             # 设置科室名称为垂直表头
             self.dept_month_table.setVerticalHeaderLabels(sorted_departments)
             
             # 设置水平表头（月份）
-       
-            self.dept_month_table.setHorizontalHeaderLabels(headers)
+            self.dept_month_table.setHorizontalHeaderLabels(sorted_months)
             
             # 颜色分界阈值
             threshold = 3
@@ -687,7 +686,6 @@ class RotationPage(QWidget):
             
             # 填充数据
             for row, dept in enumerate(sorted_departments):
-                
                 # 各月份人数
                 for col, month in enumerate(sorted_months):
                     count = dept_month_count[dept][month]
@@ -708,15 +706,35 @@ class RotationPage(QWidget):
                     item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
                     self.dept_month_table.setItem(row, col, item)
             
-            # 调整列宽
-            self.dept_month_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
-            for i in range(1, len(sorted_months)):
-                self.dept_month_table.horizontalHeader().setSectionResizeMode(i, QHeaderView.ResizeMode.Stretch)
-            
-            # 调整行高
+            # 设置垂直表头自适应宽度
             self.dept_month_table.verticalHeader().setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
             # 确保垂直表头可见
             self.dept_month_table.verticalHeader().setVisible(True)
+            
+            # 所有列宽都自适应内容
+            for i in range(len(sorted_months)):
+                self.dept_month_table.horizontalHeader().setSectionResizeMode(i, QHeaderView.ResizeMode.ResizeToContents)
+            
+            # 适当增加单元格间距
+            self.dept_month_table.setStyleSheet(self.dept_month_table.styleSheet() + """
+                QTableWidget::item {
+                    padding: 8px;
+                }
+            """)
+            
+            # 调整水平表头样式，使其更突出
+            self.dept_month_table.horizontalHeader().setStyleSheet("""
+                QHeaderView::section {
+                    background-color: #e0e0e0;
+                    padding: 8px;
+                    border: 1px solid #cccccc;
+                    font-weight: bold;
+                }
+            """)
+            
+            # 调整表格大小，使其适应内容
+            self.dept_month_table.resizeColumnsToContents()
+            self.dept_month_table.resizeRowsToContents()
             
         except Exception as e:
             QMessageBox.critical(self, "错误", f"显示科室月份统计时发生错误: {str(e)}")
