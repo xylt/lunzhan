@@ -2,13 +2,14 @@ from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
                              QPushButton, QTableWidget, QTableWidgetItem, 
                              QFileDialog, QMessageBox, QHeaderView, QGroupBox, 
                              QComboBox, QDateEdit, QSpinBox, QScrollArea,
-                             QFrame, QGridLayout)
+                             QFrame, QGridLayout, QTabWidget)
 from PyQt6.QtGui import QFont, QColor, QPainter, QBrush
 from PyQt6.QtCore import Qt, QDate, pyqtSlot, QSize
 
 import os
 import pandas as pd
-from datetime import datetime
+from datetime import datetime, timedelta
+from collections import defaultdict
 
 from models.rotation import RotationScheduler
 from pages.student_page import StudentPage
@@ -68,6 +69,48 @@ class GanttChartTable(QTableWidget):
     def sizeHint(self):
         """提供表格的建议大小"""
         width = self.horizontalHeader().length() + self.verticalHeader().width() + 50  # 额外空间用于滚动条
+        height = self.verticalHeader().length() + self.horizontalHeader().height() + 50
+        return QSize(width, height)
+
+
+class DepartmentMonthTable(QTableWidget):
+    """科室-月份人数统计表格"""
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setShowGrid(True)
+        self.setAlternatingRowColors(True)
+        self.setSelectionMode(QTableWidget.SelectionMode.NoSelection)
+        self.setSizeAdjustPolicy(QTableWidget.SizeAdjustPolicy.AdjustToContents)
+        self.setHorizontalScrollMode(QTableWidget.ScrollMode.ScrollPerPixel)
+        self.setVerticalScrollMode(QTableWidget.ScrollMode.ScrollPerPixel)
+        
+        # 设置表格样式
+        self.setStyleSheet("""
+            QTableWidget {
+                background-color: white;
+                alternate-background-color: #f9f9f9;
+                border: 1px solid #dddddd;
+                border-radius: 4px;
+                gridline-color: #dddddd;
+            }
+            QTableWidget::item {
+                padding: 6px;
+            }
+            QTableWidget::item:selected {
+                background-color: #66afe9;
+                color: white;
+            }
+            QHeaderView::section {
+                background-color: #f0f0f0;
+                padding: 6px;
+                border: 1px solid #dddddd;
+                font-weight: bold;
+            }
+        """)
+        
+    def sizeHint(self):
+        """提供表格的建议大小"""
+        width = self.horizontalHeader().length() + self.verticalHeader().width() + 50
         height = self.verticalHeader().length() + self.horizontalHeader().height() + 50
         return QSize(width, height)
 
@@ -220,15 +263,44 @@ class RotationPage(QWidget):
         
         main_layout.addWidget(settings_group)
         
-        # === 2. 轮转排期表格 ===
+        # === 2. 创建标签页容器 ===
+        self.tab_widget = QTabWidget()
+        self.tab_widget.setStyleSheet("""
+            QTabWidget::pane { /* 标签页内容区域 */
+                border: 1px solid #dddddd;
+                background: white;
+                border-radius: 3px;
+            }
+            QTabBar::tab { /* 标签页标签 */
+                background: #f0f0f0;
+                border: 1px solid #dddddd;
+                border-bottom: none;
+                border-top-left-radius: 3px;
+                border-top-right-radius: 3px;
+                padding: 6px 12px;
+                margin-right: 2px;
+            }
+            QTabBar::tab:selected { /* 选中的标签页 */
+                background: white;
+                border-bottom: 1px solid white;
+            }
+            QTabBar::tab:hover {
+                background: #e0e0e0;
+            }
+        """)
+        
+        # === 3. 学生排期表格页 ===
+        student_schedule_page = QWidget()
+        student_layout = QVBoxLayout(student_schedule_page)
+        
         self.schedule_table = GanttChartTable()
         self.schedule_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         
-        # 创建滚动区域包装表格，确保在窗口变小时可以滚动查看
-        scroll_area = QScrollArea()
-        scroll_area.setWidgetResizable(True)
-        scroll_area.setWidget(self.schedule_table)
-        scroll_area.setStyleSheet("""
+        # 创建滚动区域包装表格
+        student_scroll_area = QScrollArea()
+        student_scroll_area.setWidgetResizable(True)
+        student_scroll_area.setWidget(self.schedule_table)
+        student_scroll_area.setStyleSheet("""
             QScrollArea {
                 border: none;
                 background-color: transparent;
@@ -248,11 +320,50 @@ class RotationPage(QWidget):
             }
         """)
         
-        main_layout.addWidget(scroll_area)
+        student_layout.addWidget(student_scroll_area)
         
-        # 设置表格占据更多空间
+        # === 4. 科室月份统计表格页 ===
+        dept_month_page = QWidget()
+        dept_layout = QVBoxLayout(dept_month_page)
+        
+        self.dept_month_table = DepartmentMonthTable()
+        self.dept_month_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
+        
+        # 创建滚动区域包装表格
+        dept_scroll_area = QScrollArea()
+        dept_scroll_area.setWidgetResizable(True)
+        dept_scroll_area.setWidget(self.dept_month_table)
+        dept_scroll_area.setStyleSheet("""
+            QScrollArea {
+                border: none;
+                background-color: transparent;
+            }
+            QScrollBar:horizontal {
+                height: 15px;
+            }
+            QScrollBar:vertical {
+                width: 15px;
+            }
+            QScrollBar::handle {
+                background: #bbbbbb;
+                border-radius: 4px;
+            }
+            QScrollBar::handle:hover {
+                background: #999999;
+            }
+        """)
+        
+        dept_layout.addWidget(dept_scroll_area)
+        
+        # 添加标签页
+        self.tab_widget.addTab(student_schedule_page, "学生排期表")
+        self.tab_widget.addTab(dept_month_page, "科室人数统计")
+        
+        main_layout.addWidget(self.tab_widget)
+        
+        # 设置标签页占据更多空间
         main_layout.setStretch(0, 1)  # 设置区域占比较小
-        main_layout.setStretch(1, 4)  # 表格区域占比较大
+        main_layout.setStretch(1, 4)  # 标签页区域占比较大
     
     def _calculate_total_months(self, grade):
         """根据科室配置计算总轮转月数"""
@@ -314,6 +425,7 @@ class RotationPage(QWidget):
             
             # 显示排期结果
             self._display_schedule(grade)
+            self._display_dept_month_stats(grade)
             
             # 启用导出按钮
             self.export_button.setEnabled(True)
@@ -323,7 +435,7 @@ class RotationPage(QWidget):
             traceback.print_exc()
     
     def _display_schedule(self, grade):
-        """显示排期结果"""
+        """显示学生排期表"""
         try:
             if not self.scheduler:
                 return
@@ -470,6 +582,147 @@ class RotationPage(QWidget):
             import traceback
             traceback.print_exc()
     
+    def _display_dept_month_stats(self, grade):
+        """显示科室-月份人数统计表"""
+        try:
+            if not self.scheduler or not self.scheduler.schedule:
+                return
+                
+            # 筛选指定年级的学生
+            student_manager = self.student_page.get_student_manager()
+            department_manager = self.department_page.get_department_manager()
+            students = [s for s in student_manager.get_students() if s.grade == grade]
+            
+            if not students:
+                return
+                
+            # 找到所有日期和科室
+            all_dates = set()
+            all_departments = set()
+            for student_name, dates in self.scheduler.schedule.items():
+                if student_name in [s.name for s in students]:
+                    all_dates.update(dates.keys())
+                    for date, dept in dates.items():
+                        if dept:  # 确保科室名不为空
+                            all_departments.add(dept)
+            
+            # 排序日期和科室
+            sorted_dates = sorted(all_dates)
+            sorted_departments = sorted(all_departments)
+            
+            if not sorted_dates or not sorted_departments:
+                return
+                
+            # 创建月份列表（YYYY-MM格式）
+            months = set()
+            for date in sorted_dates:
+                month = datetime.strptime(date, "%Y-%m-%d").strftime("%Y-%m")
+                months.add(month)
+            sorted_months = sorted(months)
+            
+            # 初始化科室-月份人数统计
+            dept_month_count = defaultdict(lambda: defaultdict(int))
+            
+            # 计算每个科室每个月的人数
+            for student_name, dates in self.scheduler.schedule.items():
+                if student_name in [s.name for s in students]:
+                    for date, dept in dates.items():
+                        if dept:  # 确保科室名不为空
+                            month = datetime.strptime(date, "%Y-%m-%d").strftime("%Y-%m")
+                            dept_month_count[dept][month] += 1
+            
+            # 找出最大人数，用于颜色梯度计算
+            max_count = 1
+            for dept, months_data in dept_month_count.items():
+                for month, count in months_data.items():
+                    max_count = max(max_count, count)
+            
+            # 设置表格
+            self.dept_month_table.setRowCount(len(sorted_departments))
+            self.dept_month_table.setColumnCount(len(sorted_months))  
+            
+            # 设置科室名称为垂直表头
+            self.dept_month_table.setVerticalHeaderLabels(sorted_departments)
+            
+            # 设置水平表头（月份）
+       
+            self.dept_month_table.setHorizontalHeaderLabels(headers)
+            
+            # 颜色分界阈值
+            threshold = 3
+            
+            # 定义颜色函数：人数≤3使用绿色系，>3使用橙色到红色系
+            def get_color_for_count(count):
+                if count == 0:
+                    return QColor(255, 255, 255)  # 白色(无人)
+                
+                # 返回颜色和是否需要使用白色文字
+                if count <= threshold:
+                    # 绿色系 - 从浅到深 (较少人数)
+                    # 255/255/255 到 120/255/120
+                    intensity = count / threshold  # 0到1之间
+                    r = int(255 - 135 * intensity)
+                    g = 255
+                    b = int(255 - 135 * intensity)
+                    return QColor(r, g, b), False  # 不需要白色文字
+                else:
+                    # 橙色到红色系 - 从浅到深 (较多人数)
+                    intensity = min((count - threshold) / (max_count - threshold), 1.0) if max_count > threshold else 0
+                    need_white_text = intensity > 0.3  # 当颜色较深时需要白色文字
+                    
+                    if intensity < 0.5:  # 橙色区间
+                        # 橙色从浅到深
+                        normalized = intensity * 2  # 0到1范围
+                        r = 255
+                        g = int(255 - 128 * normalized)
+                        b = 0
+                    else:  # 红色区间
+                        # 橙色过渡到红色
+                        normalized = (intensity - 0.5) * 2  # 0到1范围
+                        r = 255
+                        g = int(127 - 127 * normalized)
+                        b = 0
+                        
+                    return QColor(r, g, b), need_white_text
+            
+            # 填充数据
+            for row, dept in enumerate(sorted_departments):
+                
+                # 各月份人数
+                for col, month in enumerate(sorted_months):
+                    count = dept_month_count[dept][month]
+                    item = QTableWidgetItem(str(count))
+                    
+                    # 根据人数设置背景颜色
+                    if count > 0:
+                        color, need_white_text = get_color_for_count(count)
+                        
+                        # 设置文本颜色
+                        if need_white_text:
+                            item.setForeground(QColor(255, 255, 255))  # 白色文字
+                        
+                        # 设置背景颜色
+                        item.setBackground(color)
+                    
+                    # 居中对齐
+                    item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+                    self.dept_month_table.setItem(row, col, item)
+            
+            # 调整列宽
+            self.dept_month_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
+            for i in range(1, len(sorted_months)):
+                self.dept_month_table.horizontalHeader().setSectionResizeMode(i, QHeaderView.ResizeMode.Stretch)
+            
+            # 调整行高
+            self.dept_month_table.verticalHeader().setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
+            # 确保垂直表头可见
+            self.dept_month_table.verticalHeader().setVisible(True)
+            
+        except Exception as e:
+            QMessageBox.critical(self, "错误", f"显示科室月份统计时发生错误: {str(e)}")
+            import traceback
+            traceback.print_exc()
+    
     def _export_excel(self):
         """导出Excel"""
         if not self.scheduler:
@@ -522,4 +775,6 @@ class RotationPage(QWidget):
         
         # 清空表格
         self.schedule_table.setRowCount(0)
-        self.schedule_table.setColumnCount(0) 
+        self.schedule_table.setColumnCount(0)
+        self.dept_month_table.setRowCount(0)
+        self.dept_month_table.setColumnCount(0) 
