@@ -248,11 +248,6 @@ class RotationScheduler:
         
         # 记录近期轮转的专业，防止同一专业连续轮转超过3个月
         recent_specialties = []
-        
-        # 获取所有科室所属的专业
-        dept_to_specialty = {}
-        for dept in self.department_manager.get_departments():
-            dept_to_specialty[dept.name] = dept.specialty
             
         # 按月份顺序安排
         for month_key in month_keys:
@@ -260,7 +255,7 @@ class RotationScheduler:
             if continuous_rotation and continuous_months_left > 0:
                 # 获取该科室的专业
                 dept_name = continuous_rotation["科室名"]
-                specialty = dept_to_specialty.get(dept_name, "未知专业")
+                specialty = continuous_rotation["科室专业"]
                 
                 # 检查这个专业是否已经连续轮转了3个月
                 continuous_specialty_count = 1  # 当前月份算一个月
@@ -270,8 +265,6 @@ class RotationScheduler:
                 
                 # 如果已经连续轮转了3个月，停止连续轮转
                 if continuous_specialty_count >= 3:
-                    # 尝试安排其他专业，特别是针对心内科
-                    # 临时跳过连续轮转，稍后重新安排
                     continuous_rotation = None
                     continuous_months_left = 0
                 else:
@@ -310,7 +303,7 @@ class RotationScheduler:
             for rotation in remaining_rotations:
                 dept_name = rotation["科室名"]
                 dept_count = dept_counts.get(dept_name, 0)
-                specialty = dept_to_specialty.get(dept_name, "未知专业")
+                specialty = rotation["科室专业"]
                 
                 # 检查该专业是否会导致连续轮转超过3个月
                 consecutive_count = 1  # 当前月份算一个月
@@ -321,10 +314,10 @@ class RotationScheduler:
                 # 特别处理心内科专业，因为它容易出现连续轮转问题
                 is_heart_specialty = specialty == "心内科"
                 
-                # 如果该专业已经连续轮转2个月，且不是强制的本专业轮转，则跳过
-                # 对于心内科，如果已经连续轮转2个月，无论是否是本专业，都尝试跳过
-                if (consecutive_count >= 2 and not rotation.get("是否本专业", False) and not rotation.get("是否自选专业", False)) or \
-                   (is_heart_specialty and consecutive_count >= 2 and not rotation.get("优先级", 0) > 9):
+                # 如果该专业已经连续轮转2个月，且不是后期轮转，则跳过
+                # 对于心内科，如果已经连续轮转2个月，无论是否是后期轮转，都尝试跳过
+                if (consecutive_count >= 2 and not rotation.get("后期轮转", False)) or \
+                   (is_heart_specialty and consecutive_count >= 2):
                     continue
                 
                 # 如果人数更少，更新最佳科室
@@ -339,9 +332,9 @@ class RotationScheduler:
             # 获取科室名和月数
             dept_name = best_rotation["科室名"]
             months = best_rotation.get("月数", 1.0)
+            specialty = best_rotation["科室专业"]
             
             # 更新近期轮转专业记录
-            specialty = dept_to_specialty.get(dept_name, "未知专业")
             recent_specialties.append(specialty)
             if len(recent_specialties) > 6:  # 保持最近6个月的记录
                 recent_specialties.pop(0)
