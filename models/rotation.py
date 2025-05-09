@@ -15,14 +15,13 @@ class RotationScheduler:
         self.department_manager = department_manager
         self.schedule = {}  # 保存排期结果，格式：{学生名: {日期: 科室名}}
         self.department_counts = {}  # 二维数组，记录每个科室每个月的人数
-        
-    def _calculate_total_rotation_months(self, student: Student) -> int:
-        """计算该学生需要的总轮转月数"""
+
+    def _calculate_base_rotation_months(self) -> int:
+        """计算该学生的基础轮转月数"""
         departments = self.department_manager.get_departments()
-            
-        # 计算所有科室的基础轮转月数
         total_months = 0
         calculated_specialties = set()
+        
         for dept in departments:
             # 获取科室总月数
             if hasattr(dept, 'get_total_months'):
@@ -30,6 +29,15 @@ class RotationScheduler:
                 if dept.specialty not in calculated_specialties:
                     total_months += dept.get_total_months()
                     calculated_specialties.add(dept.specialty)
+        
+        return total_months
+        
+    def _calculate_total_rotation_months(self, student: Student) -> int:
+        """计算该学生需要的总轮转月数"""
+            
+        # 计算所有科室的基础轮转月数
+        total_months = 0
+        total_months += self._calculate_base_rotation_months()
         
         # 学生自己的专业额外增加2个月
         total_months += 2
@@ -40,7 +48,7 @@ class RotationScheduler:
             
         return total_months
 
-    def generate_schedule(self, start_date: datetime, grade: str, months: int = 36) -> Dict[str, Dict[str, str]]:
+    def generate_schedule(self, start_date: datetime, grade: str) -> Dict[str, Dict[str, str]]:
         """生成轮转排期"""
         students = [s for s in self.student_manager.get_students() if s.grade == grade]
         departments = self.department_manager.get_departments()
@@ -53,11 +61,11 @@ class RotationScheduler:
         print(f"需要安排的专业: {len(all_specialties)}个 - {', '.join(all_specialties)}")
         
         # 初始化一个全局的月度科室人数矩阵
-        max_months = 60  # 设置一个足够大的月数范围
+        max_months = self._calculate_base_rotation_months() + 4  # 设置最大月数
         month_keys = []
         for i in range(max_months):
             current_date = start_date + timedelta(days=30*i)
-            month_keys.append(current_date.strftime("%Y-%m-%d"))
+            month_keys.append(current_date.strftime("%Y-%m"))
         
         # 初始化全局月度科室人数矩阵 {月份: {科室: 人数}}
         global_dept_counts = {}
@@ -110,7 +118,7 @@ class RotationScheduler:
             self.department_counts[dept.name] = {}
             for i in range(months):
                 current_date = start_date + timedelta(days=30*i)
-                date_key = current_date.strftime("%Y-%m-%d")
+                date_key = current_date.strftime("%Y-%m")
                 self.department_counts[dept.name][date_key] = 0
     
     def _build_required_rotations(self) -> List[Dict]:
@@ -463,8 +471,8 @@ class RotationScheduler:
                 next_date = half_month_dates[i + 1]
                 
                 # 计算日期之间的间隔
-                current_dt = datetime.strptime(current_date, "%Y-%m-%d")
-                next_dt = datetime.strptime(next_date, "%Y-%m-%d")
+                current_dt = datetime.strptime(current_date, "%Y-%m")
+                next_dt = datetime.strptime(next_date, "%Y-%m")
                 days_gap = (next_dt - current_dt).days
                 
                 # 如果两个日期足够接近（间隔不超过20天），合并显示
@@ -555,7 +563,7 @@ class RotationScheduler:
         
         # 添加日期列，并为每个日期创建空列表
         for date in sorted_dates:
-            display_date = datetime.strptime(date, "%Y-%m-%d").strftime("%Y-%m")
+            display_date = datetime.strptime(date, "%Y-%m").strftime("%Y-%m")
             data[display_date] = []
             
         # 填充数据
@@ -569,7 +577,7 @@ class RotationScheduler:
             data["职位"].append(student.position)
             
             for date in sorted_dates:
-                display_date = datetime.strptime(date, "%Y-%m-%d").strftime("%Y-%m")
+                display_date = datetime.strptime(date, "%Y-%m").strftime("%Y-%m")
                 if date in self.schedule[student.name]:
                     data[display_date].append(self.schedule[student.name][date])
                 else:

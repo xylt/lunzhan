@@ -397,7 +397,7 @@ class RotationPage(QWidget):
             start_date = self.start_date_edit.date().toPyDate()
             
             # 计算基础轮转月数
-            months = self._calculate_base_months(grade)
+            #months = self._calculate_base_months(grade)
             
             # 创建调度器
             student_manager = self.student_page.get_student_manager()
@@ -416,7 +416,7 @@ class RotationPage(QWidget):
             
             # 创建调度器并生成排期
             self.scheduler = RotationScheduler(student_manager, department_manager)
-            self.scheduler.generate_schedule(start_date, grade, months)
+            self.scheduler.generate_schedule(start_date, grade)
             
             # 显示排期结果
             self._display_schedule(grade)
@@ -467,7 +467,7 @@ class RotationPage(QWidget):
             # 添加日期列，并为每个日期创建空列表
             date_columns = []
             for date in sorted_dates:
-                display_date = datetime.strptime(date, "%Y-%m-%d").strftime("%Y-%m")
+                display_date = datetime.strptime(date, "%Y-%m").strftime("%Y-%m")
                 if display_date not in data:
                     data[display_date] = []
                     date_columns.append(display_date)
@@ -485,7 +485,7 @@ class RotationPage(QWidget):
                 for display_date in date_columns:
                     found = False
                     for date in sorted_dates:
-                        curr_display_date = datetime.strptime(date, "%Y-%m-%d").strftime("%Y-%m")
+                        curr_display_date = datetime.strptime(date, "%Y-%m").strftime("%Y-%m")
                         if curr_display_date == display_date and date in self.scheduler.schedule[student.name]:
                             data[display_date].append(self.scheduler.schedule[student.name][date])
                             found = True
@@ -611,7 +611,7 @@ class RotationPage(QWidget):
             # 创建月份列表（YYYY-MM格式）
             months = set()
             for date in sorted_dates:
-                month = datetime.strptime(date, "%Y-%m-%d").strftime("%Y-%m")
+                month = datetime.strptime(date, "%Y-%m").strftime("%Y-%m")
                 months.add(month)
             sorted_months = sorted(months)
             
@@ -623,7 +623,7 @@ class RotationPage(QWidget):
                 if student_name in [s.name for s in students]:
                     for date, dept in dates.items():
                         if dept:  # 确保科室名不为空
-                            month = datetime.strptime(date, "%Y-%m-%d").strftime("%Y-%m")
+                            month = datetime.strptime(date, "%Y-%m").strftime("%Y-%m")
                             dept_month_count[dept][month] += 1
             
             # 找出最大人数，用于颜色梯度计算

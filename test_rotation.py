@@ -69,7 +69,7 @@ def test_rotation():
     
     # 添加日期列，并为每个日期创建空列表
     for date in sorted_dates:
-        display_date = datetime.strptime(date, "%Y-%m-%d").strftime("%Y-%m")
+        display_date = datetime.strptime(date, "%Y-%m").strftime("%Y-%m")
         data[display_date] = []
     
     # 填充数据
@@ -83,7 +83,7 @@ def test_rotation():
         data["职位"].append(student.position)
         
         for date in sorted_dates:
-            display_date = datetime.strptime(date, "%Y-%m-%d").strftime("%Y-%m")
+            display_date = datetime.strptime(date, "%Y-%m").strftime("%Y-%m")
             if date in scheduler.schedule[student.name]:
                 data[display_date].append(scheduler.schedule[student.name][date])
             else:
