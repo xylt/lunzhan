@@ -278,8 +278,12 @@ class RotationScheduler:
                         continue
                 
                 # 计算理想人数
-                ideal_count = (rotation["月数"] * students_count) / len(month_keys)
-                dept_count = dept_counts.get(dept_name, 0) - ideal_count
+                month_count = len(month_keys) if not is_later_rotation else len(month_keys) - 12
+                ideal_count = (rotation["月数"] * students_count) / month_count
+                if rotation["月数"] <= 1:
+                    dept_count = dept_counts.get(dept_name, 0) - ideal_count
+                else:
+                    dept_count = dept_counts.get(dept_name, 0) - ideal_count*0.5
                 # 如果人数更少，更新最佳科室
                 if dept_count < min_count:
                     min_count = dept_count

@@ -599,7 +599,12 @@ class RotationPage(QWidget):
                     all_dates.update(dates.keys())
                     for date, dept in dates.items():
                         if dept:  # 确保科室名不为空
-                            all_departments.add(dept)
+                            if "/" in dept:
+                                dept_list = dept.split("/")
+                                for dept in dept_list:
+                                    all_departments.add(dept)
+                            else:
+                                all_departments.add(dept)
             
             # 排序日期和科室
             sorted_dates = sorted(all_dates)
@@ -623,8 +628,14 @@ class RotationPage(QWidget):
                 if student_name in [s.name for s in students]:
                     for date, dept in dates.items():
                         if dept:  # 确保科室名不为空
-                            month = datetime.strptime(date, "%Y-%m").strftime("%Y-%m")
-                            dept_month_count[dept][month] += 1
+                            if "/" in dept:
+                                dept_list = dept.split("/")
+                                for dept in dept_list:
+                                    month = datetime.strptime(date, "%Y-%m").strftime("%Y-%m")
+                                    dept_month_count[dept][month] += 1
+                            else:
+                                month = datetime.strptime(date, "%Y-%m").strftime("%Y-%m")
+                                dept_month_count[dept][month] += 1
             
             # 找出最大人数，用于颜色梯度计算
             max_count = 1
