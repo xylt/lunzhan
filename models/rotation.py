@@ -101,7 +101,7 @@ class RotationScheduler:
                 total_months_int += 1  # 向上取整，确保覆盖所有月份
             
             # 为学生分配轮转科室（按月份顺序）
-            self._assign_rotations_by_month(student, student_rotations, start_date, month_keys[:total_months_int], global_dept_counts)
+            self._assign_rotations_by_month(student, student_rotations, start_date, month_keys[:total_months_int], global_dept_counts, len(students))
             
             
         return self.schedule
@@ -228,8 +228,8 @@ class RotationScheduler:
         return selected_dept
 
     def _assign_rotations_by_month(self, student: Student, rotations: List[Dict], 
-                              start_date: datetime, month_keys: List[str], global_dept_counts: Dict):
-        """按月份顺序为学生分配轮转科室，每月优先安排当月人数最少的科室"""
+                              start_date: datetime, month_keys: List[str], global_dept_counts: Dict, students_count: int):
+        """按月份顺序为学生分配轮转科室，每月优先安排当月比较理想人数(心内科理想人数 = (月数 × 学生总数) ÷ 总轮转月数)最少的科室"""
         # 深拷贝轮转列表，以免修改原始数据
         remaining_rotations = rotations.copy()
         # 给每个轮转科室添加剩余月数
@@ -250,11 +250,24 @@ class RotationScheduler:
             min_count = float('inf')
             for rotation in remaining_rotations:
                 dept_name = rotation["科室名"]
-                dept_count = dept_counts.get(dept_name, 0)
+
                 # 如果月数和剩余月数不相等，则优先安排
                 if rotation["月数"] != rotation["剩余月数"]:
                     best_rotation = rotation
                     break
+
+                # 如果第2次轮转，则搜索轮转中的第1次轮转科室
+                if rotation["第几次轮转"] == 2:
+                    for rotation1 in remaining_rotations:
+                        if rotation1["第几次轮转"] == 1 and rotation1["科室专业"] == rotation["科室专业"]:
+                            continue
+
+                # 近期轮转中有多于等于月数的该专业，则不安排
+                specialty_count = recent_specialties.count(rotation["科室专业"])
+                if specialty_count >= rotation["月数"]:
+                    continue
+
+
                 is_later_rotation = rotation["后期轮转"]
                 # 如果是后期轮转，检查当前月份是否在一年后
                 if is_later_rotation:
@@ -264,6 +277,9 @@ class RotationScheduler:
                     if months_diff < 12:
                         continue
                 
+                # 计算理想人数
+                ideal_count = (rotation["月数"] * students_count) / len(month_keys)
+                dept_count = dept_counts.get(dept_name, 0) - ideal_count
                 # 如果人数更少，更新最佳科室
                 if dept_count < min_count:
                     min_count = dept_count
