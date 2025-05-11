@@ -25,6 +25,11 @@ class MainWindow(QMainWindow):
         self.setGeometry(100, 100, 1200, 800)
         self.setMinimumSize(1000, 700)
         
+        # 设置窗口图标和任务栏图标
+        icon = QIcon("asset/icon.ico")
+        self.setWindowIcon(icon)
+        QApplication.setWindowIcon(icon)
+        
         # 创建标签页
         self.tabs = QTabWidget()
         self.tabs.setFont(QFont("Microsoft YaHei", 10))

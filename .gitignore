@@ -3,9 +3,12 @@ venv/
 .venv/
 env/
 ENV/
+venv311/
 
 # Python 编译文件
 __pycache__/
+models/__pycache__/
+pages/__pycache__/
 *.py[cod]
 *$py.class
 
@@ -29,4 +32,4 @@ Thumbs.db
 
 # 本地配置文件
 .env
-.env.local 
+.env.local

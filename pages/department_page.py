@@ -286,7 +286,7 @@ class DepartmentPage(QWidget):
             else:
                 # 如果没有/，则视为单次轮转
                 try:
-                    months = float(int(config_text/0.5)*0.5)
+                    months = float(int(float(config_text)/0.5)*0.5)
                     if months <= 0:
                         return None, None
                     months_list.append(months)

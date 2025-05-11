@@ -154,7 +154,8 @@ class RotationScheduler:
                 "科室专业": specialty_department.specialty,
                 "月数": 2.0,
                 "第几次轮转": 1,
-                "后期轮转": True
+                "后期轮转": True,
+                "特殊标识": "(门诊)"
             }
             student_rotations.append(rotation_info)
             
@@ -264,7 +265,7 @@ class RotationScheduler:
 
                 # 近期轮转中有多于等于月数的该专业，则不安排
                 specialty_count = recent_specialties.count(rotation["科室专业"])
-                if specialty_count >= rotation["月数"]:
+                if specialty_count >= 1:
                     continue
 
 
@@ -281,7 +282,7 @@ class RotationScheduler:
                 month_count = len(month_keys) if not is_later_rotation else len(month_keys) - 12
                 ideal_count = (rotation["月数"] * students_count) / month_count
                 if rotation["月数"] <= 1:
-                    dept_count = dept_counts.get(dept_name, 0) - ideal_count
+                    dept_count = dept_counts.get(dept_name, 0) - ideal_count*0.8
                 else:
                     dept_count = dept_counts.get(dept_name, 0) - ideal_count*0.5
                 # 如果人数更少，更新最佳科室
@@ -299,11 +300,15 @@ class RotationScheduler:
             
             # 更新近期轮转专业记录
             recent_specialties.append(specialty)
-            if len(recent_specialties) > 4:  # 保持所有科室最大月数+1个月的记录
+            if len(recent_specialties) > 1:  # 保持所有科室最大月数+1个月的记录
                 recent_specialties.pop(0)
                 
             # 安排当月轮转
             self.schedule[student.name][month_key] = dept_name
+            # 如果科室有特殊标识,添加到排期中
+            if "特殊标识" in best_rotation:
+                self.schedule[student.name][month_key] = f"{dept_name}{best_rotation['特殊标识']}"
+
             
             # 如果是0.5个月轮转，寻找月数不是整数的科室
             if best_rotation["剩余月数"] == 0.5:
